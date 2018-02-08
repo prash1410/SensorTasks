@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:background="#000"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="ps.uiet.chd.sensortasks.Accelerometer">
+
+    <ImageView
+        android:id="@+id/AccelerometerImage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:src="@drawable/ic_motorcycle_white_48dp"/>
+
+    <TextView
+        android:layout_below="@+id/AccelerometerImage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:id="@+id/AccelerometerTV"
+        android:layout_marginTop="20dp"
+        android:textSize="26sp"
+        android:text="ACCELEROMETER"
+        android:layout_centerHorizontal="true"/>
+
+    <TextView
+        android:layout_below="@+id/AccelerometerTV"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:id="@+id/AccelerometerValue"
+        android:layout_marginTop="30dp"
+        android:textSize="22sp"
+        android:text="Sensor Off"
+        android:layout_centerHorizontal="true"/>
+
+    <Button
+        android:layout_below="@+id/AccelerometerValue"
+        android:layout_centerHorizontal="true"
+        android:id="@+id/ToggleAccelerometer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:text="activate accelerometer"
+        android:textColor="#000" />
+
+    <Button
+        android:layout_below="@+id/ToggleAccelerometer"
+        android:layout_centerHorizontal="true"
+        android:id="@+id/CalibrateAccelerometer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:text="change parameters"
+        android:textColor="#000" />
+
+</RelativeLayout>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/LocationLayout"
+    android:background="#000"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="ps.uiet.chd.sensortasks.LocationActivity">
+
+    <ImageView
+        android:layout_centerHorizontal="true"
+        android:id="@+id/marker"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="100dp"
+        android:src="@drawable/marker" />
+
+    <TextView
+        android:layout_below="@+id/marker"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:id="@+id/YART"
+        android:layout_marginTop="30dp"
+        android:textSize="30sp"
+        android:text="YOU ARE AT"
+        android:layout_centerHorizontal="true"/>
+
+    <TextView
+        android:layout_below="@+id/YART"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:id="@+id/lblLocation"
+        android:layout_marginTop="30dp"
+        android:textSize="22sp"
+        android:text=""
+        android:layout_centerHorizontal="true"/>
+
+    <Button
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/lblLocation"
+        android:id="@+id/btnLocationUpdates"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:text="Start location updates"
+        android:textColor="#000" />
+
+</RelativeLayout>

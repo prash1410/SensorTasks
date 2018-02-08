@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:background="#000"
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/calibrateDialogTV"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:textSize="22sp"
+        android:layout_marginTop="30dp"
+        android:text="Keep your device still on a table and press calibrate now button"
+        android:textColor="#fff"/>
+
+    <Button
+        android:id="@+id/calibrateDialogButton"
+        android:layout_width="wrap_content"
+        android:layout_marginTop="30dp"
+        android:textColor="#000"
+        android:layout_marginBottom="30dp"
+        android:text="Calibrate now"
+        android:layout_below="@+id/calibrateDialogTV"
+        android:layout_centerHorizontal="true"
+        android:layout_height="wrap_content" />
+
+    <android.support.design.widget.TextInputLayout
+        android:layout_centerHorizontal="true"
+        android:hint="Sampling Rate"
+        android:layout_below="@+id/calibrateDialogButton"
+        android:id="@+id/samplingRateLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:layout_gravity="center"
+            android:inputType="number"
+            android:gravity="center"
+            android:id="@+id/samplingRate"
+            android:textColor="#fff"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </android.support.design.widget.TextInputLayout>
+
+    <android.support.design.widget.TextInputLayout
+        android:layout_marginTop="30dp"
+        android:hint="Sampling Time"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/samplingRateLayout"
+        android:id="@+id/samplingTimeLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:inputType="number"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:id="@+id/samplingTime"
+            android:textColor="#fff"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </android.support.design.widget.TextInputLayout>
+
+    <CheckBox
+        android:layout_marginBottom="20dp"
+        android:layout_width="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:textColor="#fff"
+        android:id="@+id/sendResults"
+        android:checked="false"
+        android:text="Send results"
+        android:layout_below="@+id/samplingTimeLayout"
+        android:layout_height="wrap_content" />
+
+</RelativeLayout>
