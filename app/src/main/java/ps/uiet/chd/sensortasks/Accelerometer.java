@@ -1,11 +1,13 @@
 package ps.uiet.chd.sensortasks;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.Uri;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.support.v7.app.AlertDialog;
@@ -15,6 +17,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -30,6 +33,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -67,6 +71,8 @@ public class Accelerometer extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         getSupportActionBar().setTitle("Accelerometer");
+        StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
+        StrictMode.setVmPolicy(builder.build());
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         setContentView(R.layout.activity_accelerometer);
         StrictMode.ThreadPolicy policy=new StrictMode.ThreadPolicy.Builder().permitAll().build();
@@ -219,6 +225,13 @@ public class Accelerometer extends AppCompatActivity
     {
         switch (item.getItemId())
         {
+            case R.id.open_file:
+                Uri uri = Uri.fromFile(lastFileModified(String.valueOf(Environment.getExternalStorageDirectory())+"/Alarms"));
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(uri, "text/plain");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                break;
             case android.R.id.home:
                 finish();
                 break;
@@ -324,8 +337,33 @@ public class Accelerometer extends AppCompatActivity
             if(angleDifferenceY<0)angleDifferenceY = 0 - angleDifferenceY;
             if(angleDifferenceX<0)angleDifferenceX = 0 - angleDifferenceX;
             if(angleDifferenceZ<0)angleDifferenceZ = 0 - angleDifferenceZ;
-            AccelerometerValue.setText("Avg X Acc: "+xaverageLinearAcceleration+"\nAvg Y Acc: "+averageLinearAcceleration+"\nAvg Z Acc: "+zaverageLinearAcceleration+"\nVariance: "+variance+"\nAngleX: "+angleDifferenceX+"\nAngleY: "+angleDifferenceY+"\nAngleZ: "+angleDifferenceZ);
-            writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
+
+            double xMagVariance,yMagVariance,zMagVariance,magVarianceSum = 0;
+            for(double xMag:xMagList)
+            {
+                double tempMag = (xMag-xaverageLinearAcceleration);
+                tempMag = tempMag*tempMag;
+                magVarianceSum = magVarianceSum+tempMag;
+            }
+            xMagVariance = magVarianceSum/20;
+            magVarianceSum=0;
+            for(double yMag:yMagList)
+            {
+                double tempMag = (yMag-averageLinearAcceleration);
+                tempMag = tempMag*tempMag;
+                magVarianceSum = magVarianceSum+tempMag;
+            }
+            yMagVariance = magVarianceSum/20;
+            magVarianceSum=0;
+            for(double zMag:zMagList)
+            {
+                double tempMag = (zMag-zaverageLinearAcceleration);
+                tempMag = tempMag*tempMag;
+                magVarianceSum = magVarianceSum+tempMag;
+            }
+            zMagVariance = magVarianceSum/20;
+            AccelerometerValue.setText("Var X Acc: "+xMagVariance+"\nVar Y Acc: "+yMagVariance+"\nVar Z Acc: "+zMagVariance+"\nVariance: "+variance+"\nAngleX: "+angleDifferenceX+"\nAngleY: "+angleDifferenceY+"\nAngleZ: "+angleDifferenceZ);
+            writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\nxVariance: "+xMagVariance+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\nyVariance: "+yMagVariance+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\nzVariance: "+zMagVariance+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
             writer.flush();
             writer.close();
         } catch (IOException e)
@@ -333,6 +371,7 @@ public class Accelerometer extends AppCompatActivity
             e.printStackTrace();
         }
         if(sendResults)sendData(output);
+
     }
 
 
@@ -401,4 +440,31 @@ public class Accelerometer extends AppCompatActivity
 
         }
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.open, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    public static File lastFileModified(String dir)
+    {
+        File fl = new File(dir);
+        File[] files = fl.listFiles(new FileFilter()
+        {
+            public boolean accept(File file) {
+                return file.isFile();
+            }
+        });
+        long lastMod = Long.MIN_VALUE;
+        File choice = null;
+        for (File file : files) {
+            if (file.lastModified() > lastMod) {
+                choice = file;
+                lastMod = file.lastModified();
+            }
+        }
+        return choice;
+    }
+
 }
