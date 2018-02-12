@@ -3,6 +3,7 @@ package ps.uiet.chd.sensortasks;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -23,8 +24,9 @@ import android.widget.RelativeLayout;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener
 {
+    boolean ServiceStarted = false;
     RelativeLayout MainActivityLayout;
-    Button LocationButton,Accelerometer;
+    Button LocationButton,Accelerometer,AccelerometerService;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -34,7 +36,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Accelerometer.setOnClickListener(this);
         LocationButton = findViewById(R.id.LocationButton);
         LocationButton.setOnClickListener(this);
+        AccelerometerService = findViewById(R.id.AccelerometerServiceButton);
+        AccelerometerService.setOnClickListener(this);
         MainActivityLayout = findViewById(R.id.MainActivityLayout);
+        ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
+        if(ServiceStarted)AccelerometerService.setText("Stop accelerometer\nservice");
+        else AccelerometerService.setText("Start accelerometer\nservice");
     }
 
     @TargetApi(23)
@@ -100,6 +107,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Intent intent2 = new Intent(getApplicationContext(),Accelerometer.class);
                 startActivity(intent2);
                 break;
+            case R.id.AccelerometerServiceButton:
+                if(!ServiceStarted)
+                {
+                    startService(new Intent(this, AccelerometerBackgroundService.class));
+                    AccelerometerService.setText("Stop accelerometer\nService");
+                    ServiceStarted = true;
+                }
+                else
+                {
+                    stopService(new Intent(this, AccelerometerBackgroundService.class));
+                    AccelerometerService.setText("Start accelerometer\nService");
+                    ServiceStarted = false;
+                }
+                break;
             default:
                 break;
         }
@@ -141,5 +162,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         LocationManager manager = (LocationManager) getSystemService( Context.LOCATION_SERVICE );
         assert manager != null;
         return manager.isProviderEnabled( LocationManager.GPS_PROVIDER );
+    }
+
+
+    private boolean isMyServiceRunning(Class<?> serviceClass)
+    {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

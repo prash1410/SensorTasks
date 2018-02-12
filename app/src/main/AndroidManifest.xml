@@ -35,7 +35,9 @@
             </intent-filter>
         </activity>
         <activity android:name=".LocationActivity" />
-        <activity android:name=".Accelerometer"></activity>
+        <activity android:name=".Accelerometer" />
+
+        <service android:name=".AccelerometerBackgroundService" android:enabled="true" />
     </application>
 
 </manifest>
