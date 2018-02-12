@@ -410,8 +410,8 @@ public class Accelerometer extends AppCompatActivity
     public void getAngle(double x, double y, double z, boolean init)
     {
         double tempY = Math.round(((Math.asin(y/9.8)*180.0d)/Math.PI)*100d)/100d;
-        double tempZ = Math.round(((Math.asin(x/9.8)*180.0d)/Math.PI)*100d)/100d;
-        double tempX = Math.round(((Math.asin(z/9.8)*180.0d)/Math.PI)*100d)/100d;
+        double tempZ = Math.round(((Math.asin(z/9.8)*180.0d)/Math.PI)*100d)/100d;
+        double tempX = Math.round(((Math.asin(x/9.8)*180.0d)/Math.PI)*100d)/100d;
         if(init)
         {
             initAngleX = tempX;
