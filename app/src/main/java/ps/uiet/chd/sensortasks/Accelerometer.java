@@ -10,6 +10,7 @@ import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.StrictMode;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -23,6 +24,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import org.apache.http.NameValuePair;
@@ -42,6 +44,7 @@ import java.util.List;
 
 public class Accelerometer extends AppCompatActivity
 {
+    RelativeLayout AccelerometerLayout;
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
@@ -78,6 +81,7 @@ public class Accelerometer extends AppCompatActivity
         StrictMode.ThreadPolicy policy=new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
         AccelerometerToggleButton = findViewById(R.id.ToggleAccelerometer);
+        AccelerometerLayout = findViewById(R.id.AccelerometerLayout);
         AccelerometerValue = findViewById(R.id.AccelerometerValue);
         CalibrateAccelerometer = findViewById(R.id.CalibrateAccelerometer);
         AccelerometerManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -331,9 +335,9 @@ public class Accelerometer extends AppCompatActivity
             double xaverageLinearAcceleration = (double)Math.round((xlinearAccelerationSum/20) * 100d) / 100d;
             double zaverageLinearAcceleration = (double)Math.round((zlinearAccelerationSum/20) * 100d) / 100d;
 
-            double angleDifferenceY = termAngleY - initAngleY;
-            double angleDifferenceX = termAngleX - initAngleX;
-            double angleDifferenceZ = termAngleZ - initAngleZ;
+            double angleDifferenceY = (double)Math.round((termAngleY - initAngleY) * 100d) / 100d;
+            double angleDifferenceX = (double)Math.round((termAngleX - initAngleX) * 100d) / 100d;
+            double angleDifferenceZ = (double)Math.round((termAngleZ - initAngleZ) * 100d) / 100d;
             if(angleDifferenceY<0)angleDifferenceY = 0 - angleDifferenceY;
             if(angleDifferenceX<0)angleDifferenceX = 0 - angleDifferenceX;
             if(angleDifferenceZ<0)angleDifferenceZ = 0 - angleDifferenceZ;
@@ -345,7 +349,7 @@ public class Accelerometer extends AppCompatActivity
                 tempMag = tempMag*tempMag;
                 magVarianceSum = magVarianceSum+tempMag;
             }
-            xMagVariance = magVarianceSum/20;
+            xMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
             magVarianceSum=0;
             for(double yMag:yMagList)
             {
@@ -353,7 +357,7 @@ public class Accelerometer extends AppCompatActivity
                 tempMag = tempMag*tempMag;
                 magVarianceSum = magVarianceSum+tempMag;
             }
-            yMagVariance = magVarianceSum/20;
+            yMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
             magVarianceSum=0;
             for(double zMag:zMagList)
             {
@@ -361,11 +365,13 @@ public class Accelerometer extends AppCompatActivity
                 tempMag = tempMag*tempMag;
                 magVarianceSum = magVarianceSum+tempMag;
             }
-            zMagVariance = magVarianceSum/20;
+            zMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
             AccelerometerValue.setText("Var X Acc: "+xMagVariance+"\nVar Y Acc: "+yMagVariance+"\nVar Z Acc: "+zMagVariance+"\nVariance: "+variance+"\nAngleX: "+angleDifferenceX+"\nAngleY: "+angleDifferenceY+"\nAngleZ: "+angleDifferenceZ);
             writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\nxVariance: "+xMagVariance+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\nyVariance: "+yMagVariance+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\nzVariance: "+zMagVariance+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
             writer.flush();
             writer.close();
+
+            predict(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ);
         } catch (IOException e)
         {
             e.printStackTrace();
@@ -441,8 +447,86 @@ public class Accelerometer extends AppCompatActivity
         }
     }
 
+    public void predict(double variance,double angleX,double angleY,double angleZ)
+    {
+        boolean driving;
+        driving = variance < 2 && variance > 0.3;
+
+        if(driving)
+        {
+            int axisCounter = 0;
+            if(angleX>15)axisCounter++;
+            if(angleY>15)axisCounter++;
+            if(angleZ>15)axisCounter++;
+            driving = axisCounter < 1;
+            if(driving)
+            {
+                Snackbar snackbar = Snackbar
+                        .make(AccelerometerLayout, "You're most probably driving", Snackbar.LENGTH_LONG)
+                        .setAction("OK", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {}
+                        });
+
+                snackbar.show();
+            }
+            else
+            {
+                Snackbar snackbar = Snackbar
+                        .make(AccelerometerLayout, "You've most probably just picked up your phone", Snackbar.LENGTH_LONG)
+                        .setAction("OK", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {}
+                        });
+
+                snackbar.show();
+            }
+        }
+        if(variance>=2)
+        {
+            Snackbar snackbar = Snackbar
+                    .make(AccelerometerLayout, "You're most probably walking", Snackbar.LENGTH_LONG)
+                    .setAction("OK", new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {}
+                    });
+
+            snackbar.show();
+        }
+        if(variance<=0.1)
+        {
+            int axisCounter = 0;
+            if(angleX>15)axisCounter++;
+            if(angleY>15)axisCounter++;
+            if(angleZ>15)axisCounter++;
+            if(axisCounter>0)
+            {
+                Snackbar snackbar = Snackbar
+                        .make(AccelerometerLayout, "You've most probably just picked up your phone", Snackbar.LENGTH_LONG)
+                        .setAction("OK", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {}
+                        });
+
+                snackbar.show();
+            }
+            else
+            {
+                Snackbar snackbar = Snackbar
+                        .make(AccelerometerLayout, "Device has not moved significantly", Snackbar.LENGTH_LONG)
+                        .setAction("OK", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {}
+                        });
+
+                snackbar.show();
+            }
+        }
+    }
+
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
         getMenuInflater().inflate(R.menu.open, menu);
         return super.onCreateOptionsMenu(menu);
     }
@@ -452,7 +536,8 @@ public class Accelerometer extends AppCompatActivity
         File fl = new File(dir);
         File[] files = fl.listFiles(new FileFilter()
         {
-            public boolean accept(File file) {
+            public boolean accept(File file)
+            {
                 return file.isFile();
             }
         });
