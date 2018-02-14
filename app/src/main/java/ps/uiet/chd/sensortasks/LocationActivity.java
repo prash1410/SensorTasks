@@ -46,9 +46,9 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
         setContentView(R.layout.activity_location);
         getSupportActionBar().setTitle("Geo Location");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        LocationLayout = findViewById(R.id.LocationLayout);
-        lblLocation = findViewById(R.id.lblLocation);
-        btnStartLocationUpdates = findViewById(R.id.btnLocationUpdates);
+        LocationLayout = (RelativeLayout)findViewById(R.id.LocationLayout);
+        lblLocation = (TextView)findViewById(R.id.lblLocation);
+        btnStartLocationUpdates = (Button)findViewById(R.id.btnLocationUpdates);
 
         if (checkPlayServices())
         {

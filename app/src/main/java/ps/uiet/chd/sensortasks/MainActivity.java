@@ -32,13 +32,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Accelerometer = findViewById(R.id.AccelerometerButton);
+        Accelerometer = (Button)findViewById(R.id.AccelerometerButton);
         Accelerometer.setOnClickListener(this);
-        LocationButton = findViewById(R.id.LocationButton);
+        LocationButton = (Button)findViewById(R.id.LocationButton);
         LocationButton.setOnClickListener(this);
-        AccelerometerService = findViewById(R.id.AccelerometerServiceButton);
+        AccelerometerService = (Button)findViewById(R.id.AccelerometerServiceButton);
         AccelerometerService.setOnClickListener(this);
-        MainActivityLayout = findViewById(R.id.MainActivityLayout);
+        MainActivityLayout = (RelativeLayout)findViewById(R.id.MainActivityLayout);
         ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
         if(ServiceStarted)AccelerometerService.setText("Stop accelerometer\nservice");
         else AccelerometerService.setText("Start accelerometer\nservice");

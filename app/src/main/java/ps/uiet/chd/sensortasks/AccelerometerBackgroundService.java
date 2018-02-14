@@ -100,7 +100,7 @@ public class AccelerometerBackgroundService extends Service
     public void onDestroy()
     {
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
-        AccelerometerManager.unregisterListener(AccelerometerListener);
+        if(AccelerometerManager!=null&&AccelerometerListener!=null)AccelerometerManager.unregisterListener(AccelerometerListener);
         try
         {
             File logs = new File(String.valueOf(Environment.getExternalStorageDirectory()));
@@ -262,13 +262,43 @@ public class AccelerometerBackgroundService extends Service
             writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+ Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\nxVariance: "+xMagVariance+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\nyVariance: "+yMagVariance+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\nzVariance: "+zMagVariance+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
             writer.flush();
             writer.close();
-
-            predict(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ);
+            ArrayList<Double>varList = new ArrayList<>();
+            varList.add(xMagVariance);
+            varList.add(yMagVariance);
+            varList.add(zMagVariance);
+            predict(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ,computeResultant(varList));
         } catch (IOException e)
         {
             e.printStackTrace();
         }
 
+    }
+
+    public double computeResultant(ArrayList<Double>varList)
+    {
+        ArrayList<Double> angleArrayList = new ArrayList<>();
+        angleArrayList.add(xAngleGravity);
+        angleArrayList.add(yAngleGravity);
+        angleArrayList.add(zAngleGravity);
+        int gravityAxis = -1;
+        for(int i=0;i<angleArrayList.size();i++)
+        {
+            if(angleArrayList.get(i)<20)
+            {
+                gravityAxis = i;
+            }
+        }
+
+        if(gravityAxis!=-1)
+        {
+            ArrayList<Double>tempList = new ArrayList<>();
+            for(int i=0;i<varList.size();i++)
+            {
+                if(i!=gravityAxis)tempList.add(varList.get(i));
+            }
+            return Collections.max(tempList);
+        }
+        else return varList.get(angleArrayList.indexOf(Collections.max(angleArrayList)));
     }
 
     public void findMotionDirection()
@@ -301,28 +331,36 @@ public class AccelerometerBackgroundService extends Service
         }
     }
 
-    public void predict(double variance,double angleX,double angleY,double angleZ)
+    public void predict(double variance,double angleX,double angleY,double angleZ,double maxVariance)
     {
         boolean driving;
-        driving = variance < 2 && variance > 0.2;
+        driving = variance < 2 && variance >= 0.05;
         SimpleDateFormat formatDate = new SimpleDateFormat("h:mm:ss a");
         String formattedDate = formatDate.format(new Date()).toString();
         if(driving)
         {
+            boolean noneTrue = true;
             int axisCounter = 0;
             if(angleX>15)axisCounter++;
             if(angleY>15)axisCounter++;
             if(angleZ>15)axisCounter++;
             driving = axisCounter < 1;
-            if(driving)
+            if(driving && maxVariance<0.50)
             {
                 Toast.makeText(context,"You're most probably driving",Toast.LENGTH_LONG).show();
                 activityLogs += "\nDriving "+formattedDate;
+                noneTrue =false;
             }
-            else
+            if(!driving)
             {
                 Toast.makeText(context,"You've most probably just picked up your phone",Toast.LENGTH_LONG).show();
                 activityLogs += "\nPickup "+formattedDate;
+                noneTrue =false;
+            }
+            if(noneTrue)
+            {
+                Toast.makeText(context,"Device moved, but most probably not driving",Toast.LENGTH_LONG).show();
+                activityLogs += "\nNot driving "+formattedDate;
             }
         }
         if(variance>=2)
@@ -330,7 +368,7 @@ public class AccelerometerBackgroundService extends Service
             Toast.makeText(context,"You're most probably walking",Toast.LENGTH_LONG).show();
             activityLogs += "\nWalking "+formattedDate;
         }
-        if(variance<=0.1)
+        if(variance<0.05)
         {
             int axisCounter = 0;
             if(angleX>15)axisCounter++;

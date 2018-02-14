@@ -26,6 +26,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
@@ -80,10 +81,10 @@ public class Accelerometer extends AppCompatActivity
         setContentView(R.layout.activity_accelerometer);
         StrictMode.ThreadPolicy policy=new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
-        AccelerometerToggleButton = findViewById(R.id.ToggleAccelerometer);
-        AccelerometerLayout = findViewById(R.id.AccelerometerLayout);
-        AccelerometerValue = findViewById(R.id.AccelerometerValue);
-        CalibrateAccelerometer = findViewById(R.id.CalibrateAccelerometer);
+        AccelerometerToggleButton = (Button)findViewById(R.id.ToggleAccelerometer);
+        AccelerometerLayout = (RelativeLayout)findViewById(R.id.AccelerometerLayout);
+        AccelerometerValue = (TextView)findViewById(R.id.AccelerometerValue);
+        CalibrateAccelerometer = (Button)findViewById(R.id.CalibrateAccelerometer);
         AccelerometerManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         assert AccelerometerManager != null;
         Accelerometer = AccelerometerManager.getSensorList(Sensor.TYPE_ACCELEROMETER).get(0);
@@ -257,10 +258,10 @@ public class Accelerometer extends AppCompatActivity
         View alertLayout = inflater.inflate(R.layout.dialog_calibrater, null);
         alert.setView(alertLayout);
         alert.setCancelable(false);
-        Button Calibrate = alertLayout.findViewById(R.id.calibrateDialogButton);
-        final CheckBox checkBox = alertLayout.findViewById(R.id.sendResults);
-        final EditText SamplingRate = alertLayout.findViewById(R.id.samplingRate);
-        final EditText SamplingTime = alertLayout.findViewById(R.id.samplingTime);
+        Button Calibrate = (Button)alertLayout.findViewById(R.id.calibrateDialogButton);
+        final CheckBox checkBox = (CheckBox)alertLayout.findViewById(R.id.sendResults);
+        final EditText SamplingRate = (EditText)alertLayout.findViewById(R.id.samplingRate);
+        final EditText SamplingTime = (EditText)alertLayout.findViewById(R.id.samplingTime);
         Calibrate.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -370,8 +371,11 @@ public class Accelerometer extends AppCompatActivity
             writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\nxVariance: "+xMagVariance+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\nyVariance: "+yMagVariance+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\nzVariance: "+zMagVariance+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
             writer.flush();
             writer.close();
-
-            predict(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ);
+            ArrayList<Double>varList = new ArrayList<>();
+            varList.add(xMagVariance);
+            varList.add(yMagVariance);
+            varList.add(zMagVariance);
+            predict(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ,computeResultant(varList));
         } catch (IOException e)
         {
             e.printStackTrace();
@@ -426,7 +430,7 @@ public class Accelerometer extends AppCompatActivity
         }
     }
 
-    public void computeResultant()
+    public double computeResultant(ArrayList<Double>varList)
     {
         ArrayList<Double> angleArrayList = new ArrayList<>();
         angleArrayList.add(xAngleGravity);
@@ -443,23 +447,31 @@ public class Accelerometer extends AppCompatActivity
 
         if(gravityAxis!=-1)
         {
-
+            ArrayList<Double>tempList = new ArrayList<>();
+            for(int i=0;i<varList.size();i++)
+            {
+                if(i!=gravityAxis)tempList.add(varList.get(i));
+            }
+            return Collections.max(tempList);
         }
+        else return varList.get(angleArrayList.indexOf(Collections.max(angleArrayList)));
     }
 
-    public void predict(double variance,double angleX,double angleY,double angleZ)
+    public void predict(double variance,double angleX,double angleY,double angleZ,double maxVariance)
     {
+        Toast.makeText(getApplicationContext(),""+maxVariance,Toast.LENGTH_LONG).show();
         boolean driving;
-        driving = variance < 2 && variance > 0.3;
+        driving = variance < 2 && variance >= 0.05;
 
         if(driving)
         {
+            boolean noneTrue = true;
             int axisCounter = 0;
             if(angleX>15)axisCounter++;
             if(angleY>15)axisCounter++;
             if(angleZ>15)axisCounter++;
             driving = axisCounter < 1;
-            if(driving)
+            if(driving && maxVariance<0.50)
             {
                 Snackbar snackbar = Snackbar
                         .make(AccelerometerLayout, "You're most probably driving", Snackbar.LENGTH_LONG)
@@ -469,11 +481,24 @@ public class Accelerometer extends AppCompatActivity
                         });
 
                 snackbar.show();
+                noneTrue =false;
             }
-            else
+            if(!driving)
             {
                 Snackbar snackbar = Snackbar
                         .make(AccelerometerLayout, "You've most probably just picked up your phone", Snackbar.LENGTH_LONG)
+                        .setAction("OK", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {}
+                        });
+
+                snackbar.show();
+                noneTrue = false;
+            }
+            if(noneTrue)
+            {
+                Snackbar snackbar = Snackbar
+                        .make(AccelerometerLayout, "Device moved, but most probably not driving", Snackbar.LENGTH_LONG)
                         .setAction("OK", new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {}
@@ -493,7 +518,7 @@ public class Accelerometer extends AppCompatActivity
 
             snackbar.show();
         }
-        if(variance<=0.1)
+        if(variance<0.05)
         {
             int axisCounter = 0;
             if(angleX>15)axisCounter++;
