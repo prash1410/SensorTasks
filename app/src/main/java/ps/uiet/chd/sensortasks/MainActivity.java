@@ -109,17 +109,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.AccelerometerServiceButton:
                 if(!ServiceStarted)
-                {
-                    startService(new Intent(this, AccelerometerBackgroundService.class));
-                    AccelerometerService.setText("Stop accelerometer\nService");
-                    ServiceStarted = true;
-                }
-                else
-                {
-                    stopService(new Intent(this, AccelerometerBackgroundService.class));
-                    AccelerometerService.setText("Start accelerometer\nService");
-                    ServiceStarted = false;
-                }
+            {
+                startService(new Intent(this, AccelerometerBackgroundService.class));
+                AccelerometerService.setText("Stop accelerometer\nService");
+                ServiceStarted = true;
+            }
+            else
+            {
+                stopService(new Intent(this, AccelerometerBackgroundService.class));
+                AccelerometerService.setText("Start accelerometer\nService");
+                ServiceStarted = false;
+            }
                 break;
             default:
                 break;

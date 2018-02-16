@@ -43,6 +43,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import au.com.bytecode.opencsv.CSVWriter;
+
 public class Accelerometer extends AppCompatActivity
 {
     RelativeLayout AccelerometerLayout;
@@ -376,12 +378,12 @@ public class Accelerometer extends AppCompatActivity
             varList.add(yMagVariance);
             varList.add(zMagVariance);
             predict(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ,computeResultant(varList));
+            writeToCSV(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ);
         } catch (IOException e)
         {
             e.printStackTrace();
         }
         if(sendResults)sendData(output);
-
     }
 
 
@@ -577,4 +579,34 @@ public class Accelerometer extends AppCompatActivity
         return choice;
     }
 
+    public void writeToCSV(double variance, double xAngleDifference, double yAngleDifference, double zAngleDifference)
+    {
+        try
+        {
+            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
+            File csvFile = new File(baseDir, "/Alarms/Output.csv");
+            FileWriter fileWriter = new FileWriter(csvFile,true);
+            CSVWriter writer = new CSVWriter(fileWriter);
+            StringBuilder varianceString = new StringBuilder("" + variance);
+            for(int i=0;i<19;i++)
+            {
+                varianceString.append(",0");
+            }
+            StringBuilder angleDifferenceString = new StringBuilder(""+xAngleDifference+","+yAngleDifference+","+zAngleDifference);
+            for(int i=0;i<17;i++)
+            {
+                angleDifferenceString.append(",0");
+            }
+            String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
+            writer.writeNext(data);
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static String removeLastChar(String str)
+    {
+        return str.substring(0, str.length() - 1);
+    }
 }
