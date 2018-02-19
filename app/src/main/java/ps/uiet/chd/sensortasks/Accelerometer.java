@@ -130,9 +130,9 @@ public class Accelerometer extends AppCompatActivity
                         y=0.0;
                     }
 
-                    x = x*Math.sin(Math.toRadians(xAngleGravity));
-                    y = y*Math.sin(Math.toRadians(yAngleGravity));
-                    z = z*Math.sin(Math.toRadians(zAngleGravity));
+                    x = Math.round((x*Math.sin(Math.toRadians(xAngleGravity)))*100d)/100d;
+                    y = Math.round((y*Math.sin(Math.toRadians(yAngleGravity)))*100d)/100d;
+                    z = Math.round((z*Math.sin(Math.toRadians(zAngleGravity)))*100d)/100d;
 
                     xMagList.add(x);
                     yMagList.add(y);
