@@ -29,7 +29,7 @@ public class AccelerometerBackgroundService extends Service
     ArrayList<Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
-    double xAngleGravity,yAngleGravity,zAngleGravity;
+    double xAngleGravity = 0,yAngleGravity = 0,zAngleGravity = 0;
     double initAngleY,termAngleY,initAngleX,termAngleX,initAngleZ,termAngleZ;
     double gravity[] = new double[3];
     double initX,initY,initZ,termX,termY,termZ;
@@ -161,6 +161,11 @@ public class AccelerometerBackgroundService extends Service
                         z=0.0;
                         y=0.0;
                     }
+
+                    x = x*Math.sin(Math.toRadians(xAngleGravity));
+                    y = y*Math.sin(Math.toRadians(yAngleGravity));
+                    z = z*Math.sin(Math.toRadians(zAngleGravity));
+
                     xMagList.add(x);
                     yMagList.add(y);
                     zMagList.add(z);
