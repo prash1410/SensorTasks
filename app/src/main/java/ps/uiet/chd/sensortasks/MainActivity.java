@@ -21,12 +21,23 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener
 {
+    double[] feat = {0.69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+            0.41,18.48,17.26,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+            0.0,0.0,0.0,0.01,0.0,0.0,0.04,0.45,-0.13,0.03,0.09,1.45,0.0,-0.33,-0.02,0.32,-0.06,-0.23,0.02,-0.01,
+            0.0,0.0,0.0,0.0,-0.01,0.0,-0.01,-0.05,-0.93,3.2,1.08,-1.62,1.13,-0.43,-0.08,-0.21,-0.16,0.01,0.0,-0.26,
+            0.0,0.0,0.0,0.04,0.01,0.0,0.0,0.02,0.3,-0.09,0.04,-0.02,0.2,0.08,0.0,0.02,-0.04,-0.01,0.03,0.01
+
+    };
+
+    String rawData = "3.65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22.69,8.73,48.95,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0,0.0,0.0,-0.26,-0.15,1.12,-0.28,-0.23,0.05,-0.06,0.49,0.11,0.17,-0.43,0.19,2.52,-0.23,-0.81,0.14,-0.13,0.0,0.0,0.0,-0.37,0.67,-1.96,0.3,-0.09,-0.21,0.55,-1.95,0.24,0.12,-0.55,0.36,0.01,-0.02,-1.31,0.53,0.38,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0";
+    String[] features = new String[100];
     boolean ServiceStarted = false;
     RelativeLayout MainActivityLayout;
-    Button LocationButton,Accelerometer,AccelerometerService;
+    Button LocationButton,Accelerometer,AccelerometerService,ClasifierButton;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -38,10 +49,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         LocationButton.setOnClickListener(this);
         AccelerometerService = (Button)findViewById(R.id.AccelerometerServiceButton);
         AccelerometerService.setOnClickListener(this);
+        ClasifierButton = (Button)findViewById(R.id.ClassifierButton);
+        ClasifierButton.setOnClickListener(this);
         MainActivityLayout = (RelativeLayout)findViewById(R.id.MainActivityLayout);
         ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
         if(ServiceStarted)AccelerometerService.setText("Stop accelerometer\nservice");
         else AccelerometerService.setText("Start accelerometer\nservice");
+
     }
 
     @TargetApi(23)
@@ -120,6 +134,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 AccelerometerService.setText("Start accelerometer\nService");
                 ServiceStarted = false;
             }
+            break;
+            case R.id.ClassifierButton:
+                features = rawData.split(",");
+                SVC.main(features);
                 break;
             default:
                 break;

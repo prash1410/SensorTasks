@@ -466,7 +466,6 @@ public class Accelerometer extends AppCompatActivity
 
     public void predict(double variance,double angleX,double angleY,double angleZ,double maxVariance)
     {
-        Toast.makeText(getApplicationContext(),""+maxVariance,Toast.LENGTH_LONG).show();
         boolean driving;
         driving = variance < 2 && variance >= 0.05;
 
@@ -480,6 +479,7 @@ public class Accelerometer extends AppCompatActivity
             driving = axisCounter < 1;
             if(driving && maxVariance<0.50)
             {
+                /*
                 Snackbar snackbar = Snackbar
                         .make(AccelerometerLayout, "You're most probably driving", Snackbar.LENGTH_LONG)
                         .setAction("OK", new View.OnClickListener() {
@@ -488,10 +488,12 @@ public class Accelerometer extends AppCompatActivity
                         });
 
                 snackbar.show();
+                */
                 noneTrue =false;
             }
             if(!driving)
             {
+                /*
                 Snackbar snackbar = Snackbar
                         .make(AccelerometerLayout, "You've most probably just picked up your phone", Snackbar.LENGTH_LONG)
                         .setAction("OK", new View.OnClickListener() {
@@ -500,10 +502,12 @@ public class Accelerometer extends AppCompatActivity
                         });
 
                 snackbar.show();
+                */
                 noneTrue = false;
             }
             if(noneTrue)
             {
+                /*
                 Snackbar snackbar = Snackbar
                         .make(AccelerometerLayout, "Device moved, but most probably not driving", Snackbar.LENGTH_LONG)
                         .setAction("OK", new View.OnClickListener() {
@@ -512,10 +516,12 @@ public class Accelerometer extends AppCompatActivity
                         });
 
                 snackbar.show();
+                */
             }
         }
         if(variance>=2)
         {
+            /*
             Snackbar snackbar = Snackbar
                     .make(AccelerometerLayout, "You're most probably walking", Snackbar.LENGTH_LONG)
                     .setAction("OK", new View.OnClickListener() {
@@ -524,6 +530,7 @@ public class Accelerometer extends AppCompatActivity
                     });
 
             snackbar.show();
+            */
         }
         if(variance<0.05)
         {
@@ -533,6 +540,7 @@ public class Accelerometer extends AppCompatActivity
             if(angleZ>15)axisCounter++;
             if(axisCounter>0)
             {
+                /*
                 Snackbar snackbar = Snackbar
                         .make(AccelerometerLayout, "You've most probably just picked up your phone", Snackbar.LENGTH_LONG)
                         .setAction("OK", new View.OnClickListener() {
@@ -541,9 +549,11 @@ public class Accelerometer extends AppCompatActivity
                         });
 
                 snackbar.show();
+                */
             }
             else
             {
+                /*
                 Snackbar snackbar = Snackbar
                         .make(AccelerometerLayout, "Device has not moved significantly", Snackbar.LENGTH_LONG)
                         .setAction("OK", new View.OnClickListener() {
@@ -552,6 +562,7 @@ public class Accelerometer extends AppCompatActivity
                         });
 
                 snackbar.show();
+                */
             }
         }
     }
@@ -603,6 +614,19 @@ public class Accelerometer extends AppCompatActivity
                 angleDifferenceString.append(",0");
             }
             String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
+            String result = "Inconclusive";
+            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","));
+            if(predictionResult==0)result = "Driving";
+            if(predictionResult==1)result = "Pickup";
+            if(predictionResult==2)result = "Walking";
+            Snackbar snackbar = Snackbar
+                    .make(AccelerometerLayout, result, Snackbar.LENGTH_LONG)
+                    .setAction("OK", new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {}
+                    });
+
+            snackbar.show();
             writer.writeNext(data);
             writer.close();
         } catch (IOException e) {

@@ -353,25 +353,25 @@ public class AccelerometerBackgroundService extends Service
             driving = axisCounter < 1;
             if(driving && maxVariance<0.50)
             {
-                Toast.makeText(context,"You're most probably driving",Toast.LENGTH_LONG).show();
+                //Toast.makeText(context,"You're most probably driving",Toast.LENGTH_LONG).show();
                 activityLogs += "\nDriving "+formattedDate;
                 noneTrue =false;
             }
             if(!driving)
             {
-                Toast.makeText(context,"You've most probably just picked up your phone",Toast.LENGTH_LONG).show();
+                //Toast.makeText(context,"You've most probably just picked up your phone",Toast.LENGTH_LONG).show();
                 activityLogs += "\nPickup "+formattedDate;
                 noneTrue =false;
             }
             if(noneTrue)
             {
-                Toast.makeText(context,"Device moved, but most probably not driving",Toast.LENGTH_LONG).show();
+                //Toast.makeText(context,"Device moved, but most probably not driving",Toast.LENGTH_LONG).show();
                 activityLogs += "\nNot driving "+formattedDate;
             }
         }
         if(variance>=2)
         {
-            Toast.makeText(context,"You're most probably walking",Toast.LENGTH_LONG).show();
+            //Toast.makeText(context,"You're most probably walking",Toast.LENGTH_LONG).show();
             activityLogs += "\nWalking "+formattedDate;
         }
         if(variance<0.05)
@@ -382,12 +382,12 @@ public class AccelerometerBackgroundService extends Service
             if(angleZ>15)axisCounter++;
             if(axisCounter>0)
             {
-                Toast.makeText(context,"You've most probably just picked up your phone",Toast.LENGTH_LONG).show();
+                //Toast.makeText(context,"You've most probably just picked up your phone",Toast.LENGTH_LONG).show();
                 activityLogs += "\nPickup "+formattedDate;
             }
             else
             {
-                Toast.makeText(context,"Device has not moved significantly",Toast.LENGTH_LONG).show();
+                //Toast.makeText(context,"Device has not moved significantly",Toast.LENGTH_LONG).show();
                 activityLogs += "\nStill "+formattedDate;
             }
         }
@@ -412,6 +412,12 @@ public class AccelerometerBackgroundService extends Service
                 angleDifferenceString.append(",0");
             }
             String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
+            String result = "Inconclusive";
+            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","));
+            if(predictionResult==0)result = "Driving";
+            if(predictionResult==1)result = "Pickup";
+            if(predictionResult==2)result = "Walking";
+            Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
             writer.writeNext(data);
             writer.close();
         } catch (IOException e) {
