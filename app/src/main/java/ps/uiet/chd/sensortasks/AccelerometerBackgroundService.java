@@ -412,11 +412,11 @@ public class AccelerometerBackgroundService extends Service
                 angleDifferenceString.append(",0");
             }
             String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
-            String result = "Inconclusive";
+            String result = "Driving";
             int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","));
-            if(predictionResult==0)result = "Driving";
             if(predictionResult==1)result = "Pickup";
-            if(predictionResult==2)result = "Walking";
+            if(predictionResult==2)result = "Still";
+            if(predictionResult==3)result = "Walking";
             Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
             writer.writeNext(data);
             writer.close();
