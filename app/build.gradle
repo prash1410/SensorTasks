@@ -30,6 +30,7 @@ android {
 
 dependencies
         {
+            compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.4'
             compile 'net.sf.opencsv:opencsv:2.3'
             compile 'org.apache.httpcomponents:httpcore:4.4.7'
             compile 'org.apache.httpcomponents:httpclient:4.5'

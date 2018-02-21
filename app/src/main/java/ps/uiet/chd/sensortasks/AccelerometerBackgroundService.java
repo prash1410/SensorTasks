@@ -267,44 +267,12 @@ public class AccelerometerBackgroundService extends Service
             writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+ Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\nxVariance: "+xMagVariance+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\nyVariance: "+yMagVariance+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\nzVariance: "+zMagVariance+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
             writer.flush();
             writer.close();
-            ArrayList<Double>varList = new ArrayList<>();
-            varList.add(xMagVariance);
-            varList.add(yMagVariance);
-            varList.add(zMagVariance);
-            predict(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ,computeResultant(varList));
             writeToCSV(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ);
         } catch (IOException e)
         {
             e.printStackTrace();
         }
 
-    }
-
-    public double computeResultant(ArrayList<Double>varList)
-    {
-        ArrayList<Double> angleArrayList = new ArrayList<>();
-        angleArrayList.add(xAngleGravity);
-        angleArrayList.add(yAngleGravity);
-        angleArrayList.add(zAngleGravity);
-        int gravityAxis = -1;
-        for(int i=0;i<angleArrayList.size();i++)
-        {
-            if(angleArrayList.get(i)<20)
-            {
-                gravityAxis = i;
-            }
-        }
-
-        if(gravityAxis!=-1)
-        {
-            ArrayList<Double>tempList = new ArrayList<>();
-            for(int i=0;i<varList.size();i++)
-            {
-                if(i!=gravityAxis)tempList.add(varList.get(i));
-            }
-            return Collections.max(tempList);
-        }
-        else return varList.get(angleArrayList.indexOf(Collections.max(angleArrayList)));
     }
 
     public void findMotionDirection()
@@ -337,61 +305,6 @@ public class AccelerometerBackgroundService extends Service
         }
     }
 
-    public void predict(double variance,double angleX,double angleY,double angleZ,double maxVariance)
-    {
-        boolean driving;
-        driving = variance < 2 && variance >= 0.05;
-        SimpleDateFormat formatDate = new SimpleDateFormat("h:mm:ss a");
-        String formattedDate = formatDate.format(new Date()).toString();
-        if(driving)
-        {
-            boolean noneTrue = true;
-            int axisCounter = 0;
-            if(angleX>15)axisCounter++;
-            if(angleY>15)axisCounter++;
-            if(angleZ>15)axisCounter++;
-            driving = axisCounter < 1;
-            if(driving && maxVariance<0.50)
-            {
-                //Toast.makeText(context,"You're most probably driving",Toast.LENGTH_LONG).show();
-                activityLogs += "\nDriving "+formattedDate;
-                noneTrue =false;
-            }
-            if(!driving)
-            {
-                //Toast.makeText(context,"You've most probably just picked up your phone",Toast.LENGTH_LONG).show();
-                activityLogs += "\nPickup "+formattedDate;
-                noneTrue =false;
-            }
-            if(noneTrue)
-            {
-                //Toast.makeText(context,"Device moved, but most probably not driving",Toast.LENGTH_LONG).show();
-                activityLogs += "\nNot driving "+formattedDate;
-            }
-        }
-        if(variance>=2)
-        {
-            //Toast.makeText(context,"You're most probably walking",Toast.LENGTH_LONG).show();
-            activityLogs += "\nWalking "+formattedDate;
-        }
-        if(variance<0.05)
-        {
-            int axisCounter = 0;
-            if(angleX>15)axisCounter++;
-            if(angleY>15)axisCounter++;
-            if(angleZ>15)axisCounter++;
-            if(axisCounter>0)
-            {
-                //Toast.makeText(context,"You've most probably just picked up your phone",Toast.LENGTH_LONG).show();
-                activityLogs += "\nPickup "+formattedDate;
-            }
-            else
-            {
-                //Toast.makeText(context,"Device has not moved significantly",Toast.LENGTH_LONG).show();
-                activityLogs += "\nStill "+formattedDate;
-            }
-        }
-    }
 
     public void writeToCSV(double variance, double xAngleDifference, double yAngleDifference, double zAngleDifference)
     {
@@ -413,7 +326,8 @@ public class AccelerometerBackgroundService extends Service
             }
             String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
             String result = "Driving";
-            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","));
+            String[] dummy ={""};
+            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","),dummy);
             if(predictionResult==1)result = "Pickup";
             if(predictionResult==2)result = "Still";
             if(predictionResult==3)result = "Walking";

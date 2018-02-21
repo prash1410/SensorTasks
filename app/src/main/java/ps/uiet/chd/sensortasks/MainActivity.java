@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.provider.Settings;
@@ -22,6 +23,16 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener
 {
@@ -136,8 +147,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             break;
             case R.id.ClassifierButton:
-                features = rawData.split(",");
-                SVC.main(features);
+                assetReader();
+                //features = rawData.split(",");
+                //SVC.main(features);
                 break;
             default:
                 break;
@@ -192,5 +204,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         return false;
+    }
+
+    public void assetReader()
+    {
+        BufferedReader reader = null;
+        try
+        {
+            reader = new BufferedReader(new InputStreamReader(getAssets().open("vectors.txt")));
+            String mLine;
+            mLine = reader.readLine();
+            int vectorCount = StringUtils.countMatches(mLine, "{");
+            double finalVectorArray[][] = new double[vectorCount][100];
+            for(int i=0;i<vectorCount;i++)
+            {
+                try
+                {
+                    //finalVectorString[i] = mLine.substring(mLine.indexOf("{")+1,mLine.indexOf("}"));
+                    String tempRow[] = (mLine.substring(mLine.indexOf("{")+1,mLine.indexOf("}"))).split(",");
+                    mLine = mLine.substring(mLine.indexOf("}")+2,mLine.length());
+                    for(int j=0;j<100;j++)
+                    {
+                        finalVectorArray[i][j] = Double.valueOf(tempRow[j]);
+                    }
+                }
+                catch(StringIndexOutOfBoundsException exception)
+                {
+                    System.out.print("Exception hit");
+                }
+            }
+            Toast.makeText(getApplicationContext(),""+vectorCount+"\n"+finalVectorArray[vectorCount-1][0],Toast.LENGTH_LONG).show();
+        } catch (IOException ignored)
+        {
+        } finally
+        {
+            if (reader != null)
+            {try
+                {reader.close();} catch (IOException ignored) {}
+            }
+        }
     }
 }
