@@ -486,7 +486,7 @@ public class Accelerometer extends AppCompatActivity
             if(predictionResult==2)result = "Still";
             if(predictionResult==3)result = "Walking";
             Snackbar snackbar = Snackbar
-                    .make(AccelerometerLayout, result, Snackbar.LENGTH_LONG)
+                    .make(AccelerometerLayout, ""+predictionResult, Snackbar.LENGTH_LONG)
                     .setAction("OK", new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {}
@@ -507,7 +507,7 @@ public class Accelerometer extends AppCompatActivity
 
     public double[][] assetReader()
     {
-        double[][] vectorsArray = new double[265][100];
+        double[][] vectorsArray = new double[370][100];
         BufferedReader reader = null;
         try
         {
@@ -516,7 +516,7 @@ public class Accelerometer extends AppCompatActivity
             int linesCount = 0;
             while( (line = reader.readLine() ) != null)
             {
-                if(linesCount<265)
+                if(linesCount<370)
                 {
                     String tempLine[] = line.split(" ");
                     for(int i=0;i<100;i++)

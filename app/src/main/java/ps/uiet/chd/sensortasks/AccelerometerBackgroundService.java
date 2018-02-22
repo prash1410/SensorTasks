@@ -329,10 +329,10 @@ public class AccelerometerBackgroundService extends Service
             String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
             String result = "Driving";
             int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","),assetReader());
-            if(predictionResult==1)result = "Pickup";
+            if(predictionResult==1)result = "Still";
             if(predictionResult==2)result = "Still";
             if(predictionResult==3)result = "Walking";
-            Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(),""+predictionResult,Toast.LENGTH_LONG).show();
             writer.writeNext(data);
             writer.close();
         } catch (IOException e) {
@@ -347,7 +347,7 @@ public class AccelerometerBackgroundService extends Service
 
     public double[][] assetReader()
     {
-        double[][] vectorsArray = new double[265][100];
+        double[][] vectorsArray = new double[370][100];
         BufferedReader reader = null;
         try
         {
@@ -356,7 +356,7 @@ public class AccelerometerBackgroundService extends Service
             int linesCount = 0;
             while( (line = reader.readLine() ) != null)
             {
-                if(linesCount<265)
+                if(linesCount<370)
                 {
                     String tempLine[] = line.split(" ");
                     for(int i=0;i<100;i++)
