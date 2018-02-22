@@ -19,6 +19,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
@@ -36,16 +37,6 @@ import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener
 {
-    double[] feat = {0.69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-            0.41,18.48,17.26,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-            0.0,0.0,0.0,0.01,0.0,0.0,0.04,0.45,-0.13,0.03,0.09,1.45,0.0,-0.33,-0.02,0.32,-0.06,-0.23,0.02,-0.01,
-            0.0,0.0,0.0,0.0,-0.01,0.0,-0.01,-0.05,-0.93,3.2,1.08,-1.62,1.13,-0.43,-0.08,-0.21,-0.16,0.01,0.0,-0.26,
-            0.0,0.0,0.0,0.04,0.01,0.0,0.0,0.02,0.3,-0.09,0.04,-0.02,0.2,0.08,0.0,0.02,-0.04,-0.01,0.03,0.01
-
-    };
-
-    String rawData = "3.65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22.69,8.73,48.95,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0,0.0,0.0,-0.26,-0.15,1.12,-0.28,-0.23,0.05,-0.06,0.49,0.11,0.17,-0.43,0.19,2.52,-0.23,-0.81,0.14,-0.13,0.0,0.0,0.0,-0.37,0.67,-1.96,0.3,-0.09,-0.21,0.55,-1.95,0.24,0.12,-0.55,0.36,0.01,-0.02,-1.31,0.53,0.38,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0";
-    String[] features = new String[100];
     boolean ServiceStarted = false;
     RelativeLayout MainActivityLayout;
     Button LocationButton,Accelerometer,AccelerometerService,ClasifierButton;
@@ -212,28 +203,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         try
         {
             reader = new BufferedReader(new InputStreamReader(getAssets().open("vectors.txt")));
-            String mLine;
-            mLine = reader.readLine();
-            int vectorCount = StringUtils.countMatches(mLine, "{");
-            double finalVectorArray[][] = new double[vectorCount][100];
-            for(int i=0;i<vectorCount;i++)
+            String line;
+            int linesCount = 0;
+            double[][] vectorsArray = new double[265][100];
+            while( (line = reader.readLine() ) != null)
             {
-                try
+                if(linesCount<265)
                 {
-                    //finalVectorString[i] = mLine.substring(mLine.indexOf("{")+1,mLine.indexOf("}"));
-                    String tempRow[] = (mLine.substring(mLine.indexOf("{")+1,mLine.indexOf("}"))).split(",");
-                    mLine = mLine.substring(mLine.indexOf("}")+2,mLine.length());
-                    for(int j=0;j<100;j++)
+                    String tempLine[] = line.split(" ");
+                    for(int i=0;i<100;i++)
                     {
-                        finalVectorArray[i][j] = Double.valueOf(tempRow[j]);
+                        vectorsArray[linesCount][i] = Double.valueOf(tempLine[i]);
                     }
                 }
-                catch(StringIndexOutOfBoundsException exception)
-                {
-                    System.out.print("Exception hit");
-                }
+                linesCount++;
             }
-            Toast.makeText(getApplicationContext(),""+vectorCount+"\n"+finalVectorArray[vectorCount-1][0],Toast.LENGTH_LONG).show();
         } catch (IOException ignored)
         {
         } finally

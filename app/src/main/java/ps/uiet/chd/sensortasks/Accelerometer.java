@@ -34,10 +34,12 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -479,8 +481,7 @@ public class Accelerometer extends AppCompatActivity
             }
             String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
             String result = "Driving";
-            String[] dummy ={""};
-            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","),dummy);
+            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","),assetReader());
             if(predictionResult==1)result = "Pickup";
             if(predictionResult==2)result = "Still";
             if(predictionResult==3)result = "Walking";
@@ -502,5 +503,38 @@ public class Accelerometer extends AppCompatActivity
     private static String removeLastChar(String str)
     {
         return str.substring(0, str.length() - 1);
+    }
+
+    public double[][] assetReader()
+    {
+        double[][] vectorsArray = new double[265][100];
+        BufferedReader reader = null;
+        try
+        {
+            reader = new BufferedReader(new InputStreamReader(getAssets().open("vectors.txt")));
+            String line;
+            int linesCount = 0;
+            while( (line = reader.readLine() ) != null)
+            {
+                if(linesCount<265)
+                {
+                    String tempLine[] = line.split(" ");
+                    for(int i=0;i<100;i++)
+                    {
+                        vectorsArray[linesCount][i] = Double.valueOf(tempLine[i]);
+                    }
+                }
+                linesCount++;
+            }
+        } catch (IOException ignored)
+        {
+        } finally
+        {
+            if (reader != null)
+            {try
+            {reader.close();} catch (IOException ignored) {}
+            }
+        }
+        return vectorsArray;
     }
 }
