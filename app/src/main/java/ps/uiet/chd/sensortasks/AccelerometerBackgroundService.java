@@ -11,6 +11,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.design.widget.Snackbar;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -27,28 +28,25 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 public class AccelerometerBackgroundService extends Service
 {
+    int xZeroCrossings,yZeroCrossings,zZeroCrossings;
     static String activityLogs = "";
     ArrayList<Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
     double xAngleGravity = 0,yAngleGravity = 0,zAngleGravity = 0;
-    double initAngleY,termAngleY,initAngleX,termAngleX,initAngleZ,termAngleZ;
     double gravity[] = new double[3];
-    double initX,initY,initZ,termX,termY,termZ;
+    double initX,initY,initZ;
     String yLinearAcceleration = "";
     String xLinearAcceleration = "";
     String zLinearAcceleration = "";
-    double linearAccelerationSum = 0,xlinearAccelerationSum = 0,zlinearAccelerationSum = 0;
     int count = 0;
-    int samplingRate = 50000;
-    int samplingTime = 100;
+    int samplingTime = 30;
     String output = "",xMeasure = "",yMeasure = "",zMeasure = "";
 
     SensorManager AccelerometerManager;
     Sensor Accelerometer;
     SensorEventListener AccelerometerListener;
 
-    public Context context=this;
     public Handler handler = null;
     public Runnable runnable = null;
     @Override
@@ -64,9 +62,6 @@ public class AccelerometerBackgroundService extends Service
                 xMagList.clear();
                 yMagList.clear();
                 zMagList.clear();
-                linearAccelerationSum = 0;
-                xlinearAccelerationSum = 0;
-                zlinearAccelerationSum = 0;
                 count = 0;
                 gravity[0] = 0;
                 gravity[1] = 0;
@@ -148,36 +143,30 @@ public class AccelerometerBackgroundService extends Service
                     initX = Math.round(x*100d)/100d;
                     initY = Math.round(y*100d)/100d;
                     initZ = Math.round(z*100d)/100d;
-                    getAngle(initX,initY,initZ,true);
                     findMotionDirection();
                 }
 
-                if(count%5==0)
+                x = Math.round((event.values[0]-gravity[0])*100d)/100d;
+                y = Math.round((event.values[1]-gravity[1])*100d)/100d;
+                z = Math.round((event.values[2]-gravity[2])*100d)/100d;
+
+                x = Math.round((x*Math.sin(Math.toRadians(xAngleGravity)))*100d)/100d;
+                y = Math.round((y*Math.sin(Math.toRadians(yAngleGravity)))*100d)/100d;
+                z = Math.round((z*Math.sin(Math.toRadians(zAngleGravity)))*100d)/100d;
+
+                if(count>=0 && count<5)
                 {
-                    x = Math.round((event.values[0]-gravity[0])*100d)/100d;
-                    y = Math.round((event.values[1]-gravity[1])*100d)/100d;
-                    z = Math.round((event.values[2]-gravity[2])*100d)/100d;
-                    if(count==0||count==5||count==10)
-                    {
-                        x=0.0;
-                        z=0.0;
-                        y=0.0;
-                    }
-
-                    x = Math.round((x*Math.sin(Math.toRadians(xAngleGravity)))*100d)/100d;
-                    y = Math.round((y*Math.sin(Math.toRadians(yAngleGravity)))*100d)/100d;
-                    z = Math.round((z*Math.sin(Math.toRadians(zAngleGravity)))*100d)/100d;
-
-                    xMagList.add(x);
-                    yMagList.add(y);
-                    zMagList.add(z);
-                    yLinearAcceleration += ""+y+",";
-                    xLinearAcceleration += ""+x+",";
-                    zLinearAcceleration += ""+z+",";
-                    linearAccelerationSum = linearAccelerationSum + y;
-                    xlinearAccelerationSum = xlinearAccelerationSum + x;
-                    zlinearAccelerationSum = zlinearAccelerationSum + z;
+                    x=0.0;
+                    z=0.0;
+                    y=0.0;
                 }
+
+                xMagList.add(x);
+                yMagList.add(y);
+                zMagList.add(z);
+                yLinearAcceleration += ""+y+",";
+                xLinearAcceleration += ""+x+",";
+                zLinearAcceleration += ""+z+",";
 
                 output += ""+total+",";
                 xMeasure += ""+x+"\n";
@@ -186,10 +175,6 @@ public class AccelerometerBackgroundService extends Service
                 count++;
                 if(count==samplingTime)
                 {
-                    termX = Math.round(x*100d)/100d;
-                    termY = Math.round(y*100d)/100d;
-                    termZ = Math.round(z*100d)/100d;
-                    getAngle(termX,termY,termZ,false);
                     AccelerometerManager.unregisterListener(AccelerometerListener);
                     writeToFile(output);
                 }
@@ -198,7 +183,7 @@ public class AccelerometerBackgroundService extends Service
             @Override
             public void onAccuracyChanged(Sensor sensor, int i) {}
         };
-        AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, samplingRate);
+        AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     public void writeToFile(String data)
@@ -230,46 +215,13 @@ public class AccelerometerBackgroundService extends Service
             variance = (double)Math.round(variance * 100d) / 100d;
             writer.write(data);
             writer.append("\n\nSum: "+sum+"\nCount: "+observations.size()+"\nAverage: "+mean+"\nVariance: "+variance+"\n\n\n");
-
-            double averageLinearAcceleration = (double)Math.round((linearAccelerationSum/20) * 100d) / 100d;
-            double xaverageLinearAcceleration = (double)Math.round((xlinearAccelerationSum/20) * 100d) / 100d;
-            double zaverageLinearAcceleration = (double)Math.round((zlinearAccelerationSum/20) * 100d) / 100d;
-
-            double angleDifferenceY = (double)Math.round((termAngleY - initAngleY) * 100d) / 100d;
-            double angleDifferenceX = (double)Math.round((termAngleX - initAngleX) * 100d) / 100d;
-            double angleDifferenceZ = (double)Math.round((termAngleZ - initAngleZ) * 100d) / 100d;
-            if(angleDifferenceY<0)angleDifferenceY = 0 - angleDifferenceY;
-            if(angleDifferenceX<0)angleDifferenceX = 0 - angleDifferenceX;
-            if(angleDifferenceZ<0)angleDifferenceZ = 0 - angleDifferenceZ;
-
-            double xMagVariance,yMagVariance,zMagVariance,magVarianceSum = 0;
-            for(double xMag:xMagList)
-            {
-                double tempMag = (xMag-xaverageLinearAcceleration);
-                tempMag = tempMag*tempMag;
-                magVarianceSum = magVarianceSum+tempMag;
-            }
-            xMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
-            magVarianceSum=0;
-            for(double yMag:yMagList)
-            {
-                double tempMag = (yMag-averageLinearAcceleration);
-                tempMag = tempMag*tempMag;
-                magVarianceSum = magVarianceSum+tempMag;
-            }
-            yMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
-            magVarianceSum=0;
-            for(double zMag:zMagList)
-            {
-                double tempMag = (zMag-zaverageLinearAcceleration);
-                tempMag = tempMag*tempMag;
-                magVarianceSum = magVarianceSum+tempMag;
-            }
-            zMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
-            writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+ Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\nxVariance: "+xMagVariance+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\nyVariance: "+yMagVariance+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\nzVariance: "+zMagVariance+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
+            xZeroCrossings = getZeroCrossings(xMagList);
+            yZeroCrossings = getZeroCrossings(yMagList);
+            zZeroCrossings = getZeroCrossings(zMagList);
+            writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
             writer.flush();
             writer.close();
-            writeToCSV(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ);
+            writeToCSV(variance);
         } catch (IOException e)
         {
             e.printStackTrace();
@@ -288,27 +240,8 @@ public class AccelerometerBackgroundService extends Service
         zAngleGravity = Math.round(((Math.acos(tempInitZ/9.8)*180.0d)/Math.PI)*100d)/100d;
     }
 
-    public void getAngle(double x, double y, double z, boolean init)
-    {
-        double tempY = Math.round(((Math.asin(y/9.8)*180.0d)/Math.PI)*100d)/100d;
-        double tempZ = Math.round(((Math.asin(z/9.8)*180.0d)/Math.PI)*100d)/100d;
-        double tempX = Math.round(((Math.asin(x/9.8)*180.0d)/Math.PI)*100d)/100d;
-        if(init)
-        {
-            initAngleX = tempX;
-            initAngleY = tempY;
-            initAngleZ = tempZ;
-        }
-        else
-        {
-            termAngleX = tempX;
-            termAngleY = tempY;
-            termAngleZ = tempZ;
-        }
-    }
 
-
-    public void writeToCSV(double variance, double xAngleDifference, double yAngleDifference, double zAngleDifference)
+    public void writeToCSV(double variance)
     {
         try
         {
@@ -316,23 +249,15 @@ public class AccelerometerBackgroundService extends Service
             File csvFile = new File(baseDir, "/Alarms/Output.csv");
             FileWriter fileWriter = new FileWriter(csvFile,true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            StringBuilder varianceString = new StringBuilder("" + variance);
-            for(int i=0;i<19;i++)
-            {
-                varianceString.append(",0");
-            }
-            StringBuilder angleDifferenceString = new StringBuilder(""+xAngleDifference+","+yAngleDifference+","+zAngleDifference);
-            for(int i=0;i<17;i++)
-            {
-                angleDifferenceString.append(",0");
-            }
-            String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
-            String result = "Driving";
-            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","),assetReader());
+            String[] data = {""+variance, ""+xZeroCrossings,""+yZeroCrossings,""+zZeroCrossings};
+
+            String result = "Inconclusive";
+            int predictionResult = SVC.main((""+variance+","+xZeroCrossings+","+yZeroCrossings+","+zZeroCrossings).split(","),assetReader());
+            if(predictionResult==0)result = "Driving";
+            if(predictionResult==2)result = "Walking";
             if(predictionResult==1)result = "Still";
-            if(predictionResult==2)result = "Still";
-            if(predictionResult==3)result = "Walking";
-            Toast.makeText(getApplicationContext(),""+predictionResult,Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
+            activityLogs += result+"\n";
             writer.writeNext(data);
             writer.close();
         } catch (IOException e) {
@@ -340,14 +265,9 @@ public class AccelerometerBackgroundService extends Service
         }
     }
 
-    private static String removeLastChar(String str)
-    {
-        return str.substring(0, str.length() - 1);
-    }
-
     public double[][] assetReader()
     {
-        double[][] vectorsArray = new double[370][100];
+        double[][] vectorsArray = new double[80][4];
         BufferedReader reader = null;
         try
         {
@@ -356,10 +276,10 @@ public class AccelerometerBackgroundService extends Service
             int linesCount = 0;
             while( (line = reader.readLine() ) != null)
             {
-                if(linesCount<370)
+                if(linesCount<80)
                 {
                     String tempLine[] = line.split(" ");
-                    for(int i=0;i<100;i++)
+                    for(int i=0;i<4;i++)
                     {
                         vectorsArray[linesCount][i] = Double.valueOf(tempLine[i]);
                     }
@@ -376,5 +296,24 @@ public class AccelerometerBackgroundService extends Service
             }
         }
         return vectorsArray;
+    }
+
+    public int getZeroCrossings(ArrayList<Double> magList)
+    {
+        boolean positive;
+        int counter = 5,zeroCrossings = 0;
+        positive = magList.get(counter) > 0;
+        counter++;
+        while(counter<magList.size())
+        {
+            boolean tempPositive = magList.get(counter)>0;
+            if(positive!=tempPositive)
+            {
+                zeroCrossings++;
+                positive = tempPositive;
+            }
+            counter++;
+        }
+        return zeroCrossings;
     }
 }

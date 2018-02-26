@@ -53,6 +53,7 @@
         android:textColor="#000" />
 
     <Button
+        android:visibility="gone"
         android:layout_below="@+id/ToggleAccelerometer"
         android:layout_centerHorizontal="true"
         android:id="@+id/CalibrateAccelerometer"

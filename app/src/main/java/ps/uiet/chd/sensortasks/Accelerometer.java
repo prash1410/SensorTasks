@@ -1,8 +1,6 @@
 package ps.uiet.chd.sensortasks;
 
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -11,28 +9,14 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-
-import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -41,34 +25,27 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
 public class Accelerometer extends AppCompatActivity
 {
+    int xZeroCrossings,yZeroCrossings,zZeroCrossings;
     RelativeLayout AccelerometerLayout;
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
     double xAngleGravity = 0,yAngleGravity = 0,zAngleGravity = 0;
-    double initAngleY,termAngleY,initAngleX,termAngleX,initAngleZ,termAngleZ;
     double gravity[] = new double[3];
-    static double initX,initY,initZ,termX,termY,termZ;
+    static double initX,initY,initZ;
     static String yLinearAcceleration = "";
     static String xLinearAcceleration = "";
     static String zLinearAcceleration = "";
-    static double linearAccelerationSum = 0,xlinearAccelerationSum = 0,zlinearAccelerationSum = 0;
     static int count = 0;
-    static boolean sendResults = false;
-    static String PHP_URL = "http://172.16.176.217/sensor_data.php";
-    static int samplingRate = 50000;
-    static int samplingTime = 100;
+    static int samplingTime = 30;
     Boolean Activate = true;
-    static double noise = 0;
     String output = "",xMeasure = "",yMeasure = "",zMeasure = "";
-    Button AccelerometerToggleButton,CalibrateAccelerometer;
+    Button AccelerometerToggleButton;
     TextView AccelerometerValue;
     SensorManager AccelerometerManager;
     Sensor Accelerometer;
@@ -87,7 +64,6 @@ public class Accelerometer extends AppCompatActivity
         AccelerometerToggleButton = (Button)findViewById(R.id.ToggleAccelerometer);
         AccelerometerLayout = (RelativeLayout)findViewById(R.id.AccelerometerLayout);
         AccelerometerValue = (TextView)findViewById(R.id.AccelerometerValue);
-        CalibrateAccelerometer = (Button)findViewById(R.id.CalibrateAccelerometer);
         AccelerometerManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         assert AccelerometerManager != null;
         Accelerometer = AccelerometerManager.getSensorList(Sensor.TYPE_ACCELEROMETER).get(0);
@@ -104,8 +80,7 @@ public class Accelerometer extends AppCompatActivity
                 double x = event.values[0];
                 double y = event.values[1];
                 double z = event.values[2];
-                double total = (Math.sqrt(x * x + y * y + z * z))-noise;
-
+                double total = (Math.sqrt(x * x + y * y + z * z));
                 gravity[0] = alpha * gravity[0] + (1 - alpha) * x;
                 gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
                 gravity[2] = alpha * gravity[2] + (1 - alpha) * z;
@@ -115,37 +90,31 @@ public class Accelerometer extends AppCompatActivity
                     initX = Math.round(x*100d)/100d;
                     initY = Math.round(y*100d)/100d;
                     initZ = Math.round(z*100d)/100d;
-                    getAngle(initX,initY,initZ,true);
                     findMotionDirection();
                 }
 
-                if(count%5==0)
+                x = Math.round((event.values[0]-gravity[0])*100d)/100d;
+                y = Math.round((event.values[1]-gravity[1])*100d)/100d;
+                z = Math.round((event.values[2]-gravity[2])*100d)/100d;
+
+                x = Math.round((x*Math.sin(Math.toRadians(xAngleGravity)))*100d)/100d;
+                y = Math.round((y*Math.sin(Math.toRadians(yAngleGravity)))*100d)/100d;
+                z = Math.round((z*Math.sin(Math.toRadians(zAngleGravity)))*100d)/100d;
+
+                if(count>=0 && count<5)
                 {
-                    x = Math.round((event.values[0]-gravity[0])*100d)/100d;
-                    y = Math.round((event.values[1]-gravity[1])*100d)/100d;
-                    z = Math.round((event.values[2]-gravity[2])*100d)/100d;
-                    if(count==0||count==5||count==10)
-                    {
-                        x=0.0;
-                        z=0.0;
-                        y=0.0;
-                    }
-
-                    x = Math.round((x*Math.sin(Math.toRadians(xAngleGravity)))*100d)/100d;
-                    y = Math.round((y*Math.sin(Math.toRadians(yAngleGravity)))*100d)/100d;
-                    z = Math.round((z*Math.sin(Math.toRadians(zAngleGravity)))*100d)/100d;
-
-                    xMagList.add(x);
-                    yMagList.add(y);
-                    zMagList.add(z);
-                    yLinearAcceleration += ""+y+",";
-                    xLinearAcceleration += ""+x+",";
-                    zLinearAcceleration += ""+z+",";
-                    linearAccelerationSum = linearAccelerationSum + y;
-                    xlinearAccelerationSum = xlinearAccelerationSum + x;
-                    zlinearAccelerationSum = zlinearAccelerationSum + z;
-                    AccelerometerValue.setText("x: "+x+"\ny: "+y+"\nz: "+z);
+                    x=0.0;
+                    z=0.0;
+                    y=0.0;
                 }
+
+                xMagList.add(x);
+                yMagList.add(y);
+                zMagList.add(z);
+                yLinearAcceleration += ""+y+",";
+                xLinearAcceleration += ""+x+",";
+                zLinearAcceleration += ""+z+",";
+                AccelerometerValue.setText("x: "+x+"\ny: "+y+"\nz: "+z);
 
                 output += ""+total+",";
                 xMeasure += ""+x+"\n";
@@ -154,10 +123,6 @@ public class Accelerometer extends AppCompatActivity
                 count++;
                 if(count==samplingTime)
                 {
-                    termX = Math.round(x*100d)/100d;
-                    termY = Math.round(y*100d)/100d;
-                    termZ = Math.round(z*100d)/100d;
-                    getAngle(termX,termY,termZ,false);
                     AccelerometerToggleButton.callOnClick();
                 }
             }
@@ -175,9 +140,6 @@ public class Accelerometer extends AppCompatActivity
                     xMagList.clear();
                     yMagList.clear();
                     zMagList.clear();
-                    linearAccelerationSum = 0;
-                    xlinearAccelerationSum = 0;
-                    zlinearAccelerationSum = 0;
                     count = 0;
                     gravity[0] = 0;
                     gravity[1] = 0;
@@ -189,7 +151,7 @@ public class Accelerometer extends AppCompatActivity
                     xLinearAcceleration = "";
                     yLinearAcceleration = "";
                     zLinearAcceleration = "";
-                    AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, samplingRate);
+                    AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
                     AccelerometerToggleButton.setText("Deactivate Accelerometer");
                     Activate = false;
                 }
@@ -201,21 +163,6 @@ public class Accelerometer extends AppCompatActivity
                     writeToFile(output);
                     Activate = true;
                 }
-            }
-        });
-
-        CalibrateAccelerometer.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view)
-            {
-                if(!Activate)
-                {
-                    AccelerometerValue.setText("Accelerometer Off");
-                    AccelerometerManager.unregisterListener(AccelerometerListener);
-                    AccelerometerToggleButton.setText("Activate Accelerometer");
-                    Activate = true;
-                }
-                createCalibraterDialog();
             }
         });
     }
@@ -254,61 +201,6 @@ public class Accelerometer extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
-    public void createCalibraterDialog()
-    {
-        AlertDialog.Builder alert = new AlertDialog.Builder(this,R.style.MyDialogTheme);
-        String titleText = "Calibrate accelerometer";
-        ForegroundColorSpan foregroundColorSpan = new ForegroundColorSpan(Color.WHITE);
-        SpannableStringBuilder ssBuilder = new SpannableStringBuilder(titleText);
-        ssBuilder.setSpan(foregroundColorSpan, 0, titleText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        alert.setTitle(ssBuilder);
-        LayoutInflater inflater = getLayoutInflater();
-        View alertLayout = inflater.inflate(R.layout.dialog_calibrater, null);
-        alert.setView(alertLayout);
-        alert.setCancelable(false);
-        Button Calibrate = (Button)alertLayout.findViewById(R.id.calibrateDialogButton);
-        final CheckBox checkBox = (CheckBox)alertLayout.findViewById(R.id.sendResults);
-        final EditText SamplingRate = (EditText)alertLayout.findViewById(R.id.samplingRate);
-        final EditText SamplingTime = (EditText)alertLayout.findViewById(R.id.samplingTime);
-        Calibrate.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                final SensorEventListener sensorEventListener = new SensorEventListener() {
-                    @Override
-                    public void onSensorChanged(SensorEvent event)
-                    {
-                        float xNoise = event.values[0];
-                        float yNoise = event.values[1];
-                        float zNoise = event.values[2];
-                        noise = Math.sqrt(xNoise * xNoise + yNoise * yNoise + zNoise * zNoise);
-                    }
-
-                    @Override
-                    public void onAccuracyChanged(Sensor sensor, int i)
-                    {
-
-                    }
-                };
-                AccelerometerManager.registerListener(sensorEventListener, Accelerometer, samplingRate);
-            }
-        });
-        SamplingRate.setText(""+samplingRate);
-        SamplingTime.setText(""+samplingTime);
-        alert.setPositiveButton("OK", new DialogInterface.OnClickListener()
-        {
-            @Override
-            public void onClick(DialogInterface dialog, int which)
-            {
-                samplingRate = Integer.valueOf(SamplingRate.getText().toString());
-                samplingTime = Integer.valueOf(SamplingTime.getText().toString());
-                sendResults = checkBox.isChecked();
-            }
-        });
-        AlertDialog dialog = alert.create();
-        dialog.show();
-    }
 
     public void writeToFile(String data)
     {
@@ -340,65 +232,17 @@ public class Accelerometer extends AppCompatActivity
             writer.write(data);
             writer.append("\n\nSum: "+sum+"\nCount: "+observations.size()+"\nAverage: "+mean+"\nVariance: "+variance+"\n\n\n");
 
-            double averageLinearAcceleration = (double)Math.round((linearAccelerationSum/20) * 100d) / 100d;
-            double xaverageLinearAcceleration = (double)Math.round((xlinearAccelerationSum/20) * 100d) / 100d;
-            double zaverageLinearAcceleration = (double)Math.round((zlinearAccelerationSum/20) * 100d) / 100d;
+            xZeroCrossings = getZeroCrossings(xMagList);
+            yZeroCrossings = getZeroCrossings(yMagList);
+            zZeroCrossings = getZeroCrossings(zMagList);
 
-            double angleDifferenceY = (double)Math.round((termAngleY - initAngleY) * 100d) / 100d;
-            double angleDifferenceX = (double)Math.round((termAngleX - initAngleX) * 100d) / 100d;
-            double angleDifferenceZ = (double)Math.round((termAngleZ - initAngleZ) * 100d) / 100d;
-            if(angleDifferenceY<0)angleDifferenceY = 0 - angleDifferenceY;
-            if(angleDifferenceX<0)angleDifferenceX = 0 - angleDifferenceX;
-            if(angleDifferenceZ<0)angleDifferenceZ = 0 - angleDifferenceZ;
-
-            double xMagVariance,yMagVariance,zMagVariance,magVarianceSum = 0;
-            for(double xMag:xMagList)
-            {
-                double tempMag = (xMag-xaverageLinearAcceleration);
-                tempMag = tempMag*tempMag;
-                magVarianceSum = magVarianceSum+tempMag;
-            }
-            xMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
-            magVarianceSum=0;
-            for(double yMag:yMagList)
-            {
-                double tempMag = (yMag-averageLinearAcceleration);
-                tempMag = tempMag*tempMag;
-                magVarianceSum = magVarianceSum+tempMag;
-            }
-            yMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
-            magVarianceSum=0;
-            for(double zMag:zMagList)
-            {
-                double tempMag = (zMag-zaverageLinearAcceleration);
-                tempMag = tempMag*tempMag;
-                magVarianceSum = magVarianceSum+tempMag;
-            }
-            zMagVariance = (double)Math.round((magVarianceSum/20) * 100d) / 100d;
-            AccelerometerValue.setText("Var X Acc: "+xMagVariance+"\nVar Y Acc: "+yMagVariance+"\nVar Z Acc: "+zMagVariance+"\nVariance: "+variance+"\nAngleX: "+angleDifferenceX+"\nAngleY: "+angleDifferenceY+"\nAngleZ: "+angleDifferenceZ);
-            writer.append("\nX Average: "+xaverageLinearAcceleration+"\nY Average: "+averageLinearAcceleration+"\nZ Average: "+zaverageLinearAcceleration+"\n\nInit: "+initX+","+initY+","+initZ+"\nTerm: " + termX + "," + termY + "," + termZ+"\n\nxAngle: "+angleDifferenceX+"\nyAngle: "+angleDifferenceY+"\nzAngle: "+angleDifferenceZ+"\n\n\nxAcc: "+xLinearAcceleration+"\nxMax: "+Collections.max(xMagList)+" xMin: "+Collections.min(xMagList)+"\nxVariance: "+xMagVariance+"\n\nyAcc: "+yLinearAcceleration+"\nyMax: "+Collections.max(yMagList)+" yMin: "+Collections.min(yMagList)+"\nyVariance: "+yMagVariance+"\n\nzAcc: "+zLinearAcceleration+"\nzMax: "+Collections.max(zMagList)+" zMin: "+Collections.min(zMagList)+"\nzVariance: "+zMagVariance+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity);
+            AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
+            writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
             writer.flush();
             writer.close();
-            writeToCSV(variance,angleDifferenceX,angleDifferenceY,angleDifferenceZ);
+            writeToCSV(variance);
         } catch (IOException e)
         {
-            e.printStackTrace();
-        }
-        if(sendResults)sendData(output);
-    }
-
-
-    public void sendData(String data)
-    {
-        HttpClient httpClient = new DefaultHttpClient();
-        HttpPost httpPost = new HttpPost(PHP_URL);
-        List<NameValuePair> nameValuePairs = new ArrayList<>(1);
-        nameValuePairs.add(new BasicNameValuePair("accelerometer_data", data));
-        try
-        {
-            httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-            httpClient.execute(httpPost);
-        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -412,25 +256,6 @@ public class Accelerometer extends AppCompatActivity
         xAngleGravity = Math.round(((Math.acos(tempInitX/9.8)*180.0d)/Math.PI)*100d)/100d;
         yAngleGravity = Math.round(((Math.acos(tempInitY/9.8)*180.0d)/Math.PI)*100d)/100d;
         zAngleGravity = Math.round(((Math.acos(tempInitZ/9.8)*180.0d)/Math.PI)*100d)/100d;
-    }
-
-    public void getAngle(double x, double y, double z, boolean init)
-    {
-        double tempY = Math.round(((Math.asin(y/9.8)*180.0d)/Math.PI)*100d)/100d;
-        double tempZ = Math.round(((Math.asin(z/9.8)*180.0d)/Math.PI)*100d)/100d;
-        double tempX = Math.round(((Math.asin(x/9.8)*180.0d)/Math.PI)*100d)/100d;
-        if(init)
-        {
-            initAngleX = tempX;
-            initAngleY = tempY;
-            initAngleZ = tempZ;
-        }
-        else
-        {
-            termAngleX = tempX;
-            termAngleY = tempY;
-            termAngleZ = tempZ;
-        }
     }
 
     @Override
@@ -461,7 +286,7 @@ public class Accelerometer extends AppCompatActivity
         return choice;
     }
 
-    public void writeToCSV(double variance, double xAngleDifference, double yAngleDifference, double zAngleDifference)
+    public void writeToCSV(double variance)
     {
         try
         {
@@ -469,30 +294,22 @@ public class Accelerometer extends AppCompatActivity
             File csvFile = new File(baseDir, "/Alarms/Output.csv");
             FileWriter fileWriter = new FileWriter(csvFile,true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            StringBuilder varianceString = new StringBuilder("" + variance);
-            for(int i=0;i<19;i++)
-            {
-                varianceString.append(",0");
-            }
-            StringBuilder angleDifferenceString = new StringBuilder(""+xAngleDifference+","+yAngleDifference+","+zAngleDifference);
-            for(int i=0;i<17;i++)
-            {
-                angleDifferenceString.append(",0");
-            }
-            String[] data = {varianceString.toString(),angleDifferenceString.toString(), removeLastChar(xLinearAcceleration), removeLastChar(yLinearAcceleration), removeLastChar(zLinearAcceleration)};
-            String result = "Driving";
-            int predictionResult = SVC.main((varianceString.toString()+","+angleDifferenceString.toString()+","+xLinearAcceleration+yLinearAcceleration+removeLastChar(zLinearAcceleration)).split(","),assetReader());
-            if(predictionResult==1)result = "Pickup";
-            if(predictionResult==2)result = "Still";
-            if(predictionResult==3)result = "Walking";
+            String[] data = {""+variance, ""+xZeroCrossings,""+yZeroCrossings,""+zZeroCrossings};
+
+            String result = "Inconclusive";
+            int predictionResult = SVC.main((""+variance+","+xZeroCrossings+","+yZeroCrossings+","+zZeroCrossings).split(","),assetReader());
+            if(predictionResult==0)result = "Driving";
+            if(predictionResult==2)result = "Walking";
+            if(predictionResult==1)result = "Still";
             Snackbar snackbar = Snackbar
-                    .make(AccelerometerLayout, ""+predictionResult, Snackbar.LENGTH_LONG)
+                    .make(AccelerometerLayout, result, Snackbar.LENGTH_LONG)
                     .setAction("OK", new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {}
                     });
 
             snackbar.show();
+
             writer.writeNext(data);
             writer.close();
         } catch (IOException e) {
@@ -500,14 +317,9 @@ public class Accelerometer extends AppCompatActivity
         }
     }
 
-    private static String removeLastChar(String str)
-    {
-        return str.substring(0, str.length() - 1);
-    }
-
     public double[][] assetReader()
     {
-        double[][] vectorsArray = new double[370][100];
+        double[][] vectorsArray = new double[80][4];
         BufferedReader reader = null;
         try
         {
@@ -516,10 +328,10 @@ public class Accelerometer extends AppCompatActivity
             int linesCount = 0;
             while( (line = reader.readLine() ) != null)
             {
-                if(linesCount<370)
+                if(linesCount<80)
                 {
                     String tempLine[] = line.split(" ");
-                    for(int i=0;i<100;i++)
+                    for(int i=0;i<4;i++)
                     {
                         vectorsArray[linesCount][i] = Double.valueOf(tempLine[i]);
                     }
@@ -536,5 +348,24 @@ public class Accelerometer extends AppCompatActivity
             }
         }
         return vectorsArray;
+    }
+
+    public int getZeroCrossings(ArrayList<Double> magList)
+    {
+        boolean positive;
+        int counter = 5,zeroCrossings = 0;
+        positive = magList.get(counter) > 0;
+        counter++;
+        while(counter<magList.size())
+        {
+            boolean tempPositive = magList.get(counter)>0;
+            if(positive!=tempPositive)
+            {
+                zeroCrossings++;
+                positive = tempPositive;
+            }
+            counter++;
+        }
+        return zeroCrossings;
     }
 }

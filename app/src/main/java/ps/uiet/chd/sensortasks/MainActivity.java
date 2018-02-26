@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 {
     boolean ServiceStarted = false;
     RelativeLayout MainActivityLayout;
-    Button LocationButton,Accelerometer,AccelerometerService,ClasifierButton;
+    Button LocationButton,Accelerometer,AccelerometerService;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -51,8 +51,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         LocationButton.setOnClickListener(this);
         AccelerometerService = (Button)findViewById(R.id.AccelerometerServiceButton);
         AccelerometerService.setOnClickListener(this);
-        ClasifierButton = (Button)findViewById(R.id.ClassifierButton);
-        ClasifierButton.setOnClickListener(this);
         MainActivityLayout = (RelativeLayout)findViewById(R.id.MainActivityLayout);
         ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
         if(ServiceStarted)AccelerometerService.setText("Stop accelerometer\nservice");
@@ -125,23 +123,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.AccelerometerServiceButton:
                 if(!ServiceStarted)
-            {
-                startService(new Intent(this, AccelerometerBackgroundService.class));
-                AccelerometerService.setText("Stop accelerometer\nService");
-                ServiceStarted = true;
-            }
-            else
-            {
-                stopService(new Intent(this, AccelerometerBackgroundService.class));
-                AccelerometerService.setText("Start accelerometer\nService");
-                ServiceStarted = false;
-            }
+                {
+                    startService(new Intent(this, AccelerometerBackgroundService.class));
+                    AccelerometerService.setText("Stop accelerometer\nService");
+                    ServiceStarted = true;
+                }
+                else
+                {
+                    stopService(new Intent(this, AccelerometerBackgroundService.class));
+                    AccelerometerService.setText("Start accelerometer\nService");
+                    ServiceStarted = false;
+                }
             break;
-            case R.id.ClassifierButton:
-                assetReader();
-                //features = rawData.split(",");
-                //SVC.main(features);
-                break;
             default:
                 break;
         }
