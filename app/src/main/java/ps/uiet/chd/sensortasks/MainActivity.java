@@ -25,21 +25,15 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import org.apache.commons.lang3.StringUtils;
-
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener
 {
     boolean ServiceStarted = false;
     RelativeLayout MainActivityLayout;
-    Button LocationButton,Accelerometer,AccelerometerService;
+    Button LocationButton,Accelerometer,AccelerometerService,wekaButton;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -51,6 +45,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         LocationButton.setOnClickListener(this);
         AccelerometerService = (Button)findViewById(R.id.AccelerometerServiceButton);
         AccelerometerService.setOnClickListener(this);
+        wekaButton = (Button)findViewById(R.id.wekaButton);
+        wekaButton.setOnClickListener(this);
         MainActivityLayout = (RelativeLayout)findViewById(R.id.MainActivityLayout);
         ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
         if(ServiceStarted)AccelerometerService.setText("Stop accelerometer\nservice");
@@ -134,7 +130,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     AccelerometerService.setText("Start accelerometer\nService");
                     ServiceStarted = false;
                 }
-            break;
+                break;
+            case R.id.wekaButton:
+                Intent intent3 = new Intent(getApplicationContext(),WekaActivity.class);
+                startActivity(intent3);
+                break;
             default:
                 break;
         }

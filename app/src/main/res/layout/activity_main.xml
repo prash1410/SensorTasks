@@ -43,4 +43,16 @@
         android:textColor="#000"
         android:text="Start Accelerometer\nService"/>
 
+    <Button
+        android:id="@+id/wekaButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/AccelerometerServiceButton"
+        android:layout_marginTop="50dp"
+        android:layout_centerHorizontal="true"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:textColor="#000"
+        android:text="WEKA"/>
+
 </RelativeLayout>
