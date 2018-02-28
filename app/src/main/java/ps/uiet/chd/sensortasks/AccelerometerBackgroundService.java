@@ -3,6 +3,7 @@ package ps.uiet.chd.sensortasks;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -23,11 +24,17 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 import au.com.bytecode.opencsv.CSVWriter;
+import weka.classifiers.Classifier;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
+    static Classifier classifier = null;
     int xZeroCrossings,yZeroCrossings,zZeroCrossings;
     static String activityLogs = "";
     ArrayList<Double> xMagList = new ArrayList<>();
@@ -251,6 +258,7 @@ public class AccelerometerBackgroundService extends Service
             CSVWriter writer = new CSVWriter(fileWriter);
             String[] data = {""+variance, ""+xZeroCrossings,""+yZeroCrossings,""+zZeroCrossings};
 
+            /*
             String result = "Inconclusive";
             int predictionResult = SVC.main((""+variance+","+xZeroCrossings+","+yZeroCrossings+","+zZeroCrossings).split(","),assetReader());
             if(predictionResult==0)result = "Driving";
@@ -258,6 +266,8 @@ public class AccelerometerBackgroundService extends Service
             if(predictionResult==1)result = "Still";
             Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
             activityLogs += result+"\n";
+            */
+            Toast.makeText(getApplicationContext(),wekaPredict(variance, xZeroCrossings,yZeroCrossings,zZeroCrossings),Toast.LENGTH_LONG).show();
             writer.writeNext(data);
             writer.close();
         } catch (IOException e) {
@@ -315,5 +325,70 @@ public class AccelerometerBackgroundService extends Service
             counter++;
         }
         return zeroCrossings;
+    }
+
+    public String wekaPredict(final double var, final double xZeroCross, final double yZeroCross, final double zZeroCross)
+    {
+        String result = "Inconclusive";
+        if(classifier==null)
+        {
+            AssetManager assetManager = getAssets();
+            try
+            {
+                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open("Latest.model"));
+            } catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+        if(classifier!=null)
+        {
+            try
+            {
+
+                final Attribute attributeVariance = new Attribute("Variance");
+                final Attribute attributeXZeroCrossings = new Attribute("xZeroCrossings");
+                final Attribute attributeYZeroCrossings = new Attribute("yZeroCrossings");
+                final Attribute attributeZZeroCrossings = new Attribute("zZeroCrossings");
+                final List<String> classes = new ArrayList<String>() {
+                    {
+                        add("Dummy");
+                    }
+                };
+
+                ArrayList<Attribute> attributeList = new ArrayList<Attribute>()
+                {
+                    {
+                        add(attributeVariance);
+                        add(attributeXZeroCrossings);
+                        add(attributeYZeroCrossings);
+                        add(attributeZZeroCrossings);
+                        Attribute attributeClass = new Attribute("Activity", classes);
+                        add(attributeClass);
+                    }
+                };
+
+                Instances dataUnpredicted = new Instances("TestInstances", attributeList, 1);
+                dataUnpredicted.setClassIndex(dataUnpredicted.numAttributes() - 1);
+                DenseInstance newInstance = new DenseInstance(dataUnpredicted.numAttributes()) {
+                    {
+                        setValue(attributeVariance, var);
+                        setValue(attributeXZeroCrossings, xZeroCross);
+                        setValue(attributeYZeroCrossings, yZeroCross);
+                        setValue(attributeZZeroCrossings, zZeroCross);
+                    }
+                };
+                newInstance.setDataset(dataUnpredicted);
+                double predictedResult = classifier.classifyInstance(newInstance);
+                if(predictedResult==0.0)result = "Walking";
+                if(predictedResult==1.0)result = "Still";
+                if(predictedResult==2.0)result = "Driving";
+                Toast.makeText(getApplicationContext(),""+result,Toast.LENGTH_LONG).show();
+            } catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+        return result;
     }
 }
