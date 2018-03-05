@@ -1,7 +1,6 @@
 package ps.uiet.chd.sensortasks;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.hardware.Sensor;
@@ -12,7 +11,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -22,8 +20,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
 
 import au.com.bytecode.opencsv.CSVWriter;
@@ -267,9 +264,16 @@ public class AccelerometerBackgroundService extends Service
             Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
             activityLogs += result+"\n";
             */
-            Toast.makeText(getApplicationContext(),wekaPredict(variance, xZeroCrossings,yZeroCrossings,zZeroCrossings),Toast.LENGTH_LONG).show();
+            String result = wekaPredict(variance, xZeroCrossings,yZeroCrossings,zZeroCrossings);
+            Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
             writer.writeNext(data);
             writer.close();
+            SimpleDateFormat simpleDateFormat;
+            Calendar calender = Calendar.getInstance();
+            simpleDateFormat = new SimpleDateFormat("hh:mm:s a");
+            String time = simpleDateFormat.format(calender.getTime());
+            activityLogs += result+" "+time+"\n";
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -383,7 +387,6 @@ public class AccelerometerBackgroundService extends Service
                 if(predictedResult==0.0)result = "Walking";
                 if(predictedResult==1.0)result = "Still";
                 if(predictedResult==2.0)result = "Driving";
-                Toast.makeText(getApplicationContext(),""+result,Toast.LENGTH_LONG).show();
             } catch (Exception e)
             {
                 e.printStackTrace();
