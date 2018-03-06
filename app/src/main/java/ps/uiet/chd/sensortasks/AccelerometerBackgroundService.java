@@ -34,7 +34,7 @@ public class AccelerometerBackgroundService extends Service
     static Classifier classifier = null;
     int xZeroCrossings,yZeroCrossings,zZeroCrossings;
     static String activityLogs = "";
-    ArrayList<Double> xMagList = new ArrayList<>();
+    ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
     double xAngleGravity = 0,yAngleGravity = 0,zAngleGravity = 0;
@@ -128,10 +128,6 @@ public class AccelerometerBackgroundService extends Service
             @Override
             public void onSensorChanged(SensorEvent event)
             {
-                // alpha is calculated as t / (t + dT)
-                // with t, the low-pass filter's time-constant
-                // and dT, the event delivery rate
-
                 final float alpha = 0.8f;
                 double x = event.values[0];
                 double y = event.values[1];
