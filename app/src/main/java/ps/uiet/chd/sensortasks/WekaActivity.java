@@ -5,18 +5,24 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -25,8 +31,7 @@ import weka.core.Instances;
 public class WekaActivity extends AppCompatActivity implements View.OnClickListener
 {
     static Classifier classifier = null;
-    static String activityLogs = "";
-    ArrayList<Double> xMagList = new ArrayList<>();
+    ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
     ArrayList <Double> resultant = new ArrayList<>();
@@ -112,11 +117,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
                     zMagList.add(z);
                     resultant.add(total);
                 }
-
-                if(sampleCount==34)
-                {
-                    produceFinalResults();
-                }
+                if(sampleCount==34) produceFinalResults();
                 if(sampleCount>35 && (sampleCount+1)%5==0)
                 {
                     trimArrayLists();
@@ -148,29 +149,25 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         yMagList.clear();
         zMagList.clear();
         resultant.clear();
-        activityLogs = "";
     }
 
     public void trimArrayLists()
     {
-        ArrayList <Double> xTempList = xMagList;
-        ArrayList <Double> yTempList = yMagList;
-        ArrayList <Double> zTempList = zMagList;
-        ArrayList <Double> tempResultant = resultant;
-
-        xMagList.clear();
-        yMagList.clear();
-        zMagList.clear();
-        resultant.clear();
-
-        for(int i=5;i<xTempList.size();i++)
+        for(int i=5;i<xMagList.size();i++)
         {
-            xMagList.add(xTempList.get(i));
-            yMagList.add(yTempList.get(i));
-            zMagList.add(zTempList.get(i));
-            resultant.add(tempResultant.get(i));
+            xMagList.set(i-5,xMagList.get(i));
+            yMagList.set(i-5,yMagList.get(i));
+            zMagList.set(i-5,zMagList.get(i));
+            resultant.set(i-5,resultant.get(i));
         }
-        Toast.makeText(getApplicationContext(),""+xMagList.size(),Toast.LENGTH_SHORT).show();
+
+        for(int i=0;i<5;i++)
+        {
+            xMagList.remove(30);
+            yMagList.remove(30);
+            zMagList.remove(30);
+            resultant.remove(30);
+        }
     }
 
     public void findMotionDirection()
@@ -288,13 +285,38 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
 
     public void produceFinalResults()
     {
-        String result = wekaPredict(calculateVariance(),getZeroCrossings(xMagList),getZeroCrossings(yMagList),getZeroCrossings(zMagList));
+        double variance = (double)Math.round(calculateVariance() * 100d) / 100d;
+        int xZeroCrossings = getZeroCrossings(xMagList);
+        int yZeroCrossings = getZeroCrossings(yMagList);
+        int zZeroCrossings = getZeroCrossings(zMagList);
+
+        String result = wekaPredict(variance,xZeroCrossings,yZeroCrossings,zZeroCrossings);
         SimpleDateFormat simpleDateFormat;
         Calendar calender = Calendar.getInstance();
         simpleDateFormat = new SimpleDateFormat("hh:mm:s a");
         String time = simpleDateFormat.format(calender.getTime());
-        activityLogs += result+" "+time+"\n";
-        Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
-    }
 
+        try
+        {
+            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
+            File csvFile = new File(baseDir, "/Alarms/Output.csv");
+            FileWriter fileWriter = new FileWriter(csvFile,true);
+            CSVWriter writer = new CSVWriter(fileWriter);
+            String[] data = {""+variance, ""+xZeroCrossings,""+yZeroCrossings,""+zZeroCrossings};
+            writer.writeNext(data);
+            writer.close();
+
+            File logs = new File(String.valueOf(Environment.getExternalStorageDirectory()));
+            File logsFile = new File(logs, "/Alarms/Activity Log.txt");
+            FileWriter fileWriter1 = new FileWriter(logsFile,true);
+            fileWriter1.write(result+" "+time+"\n");
+            fileWriter1.flush();
+            fileWriter1.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
+    }
 }
