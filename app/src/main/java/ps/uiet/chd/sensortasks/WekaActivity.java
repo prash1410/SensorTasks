@@ -1,11 +1,13 @@
 package ps.uiet.chd.sensortasks;
 
+import android.annotation.SuppressLint;
 import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,9 +16,13 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -30,6 +36,7 @@ import weka.core.Instances;
 
 public class WekaActivity extends AppCompatActivity implements View.OnClickListener
 {
+    String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
     static Classifier classifier = null;
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
@@ -39,7 +46,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
     double gravity[] = new double[3];
     double initX,initY,initZ;
     boolean runnableRunning = false;
-    Button startStopRunnable;
+    Button startStopRunnable, serverTest;
     RelativeLayout wekaLayout;
     static int sampleCount = 0;
 
@@ -52,8 +59,12 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weka);
+        StrictMode.ThreadPolicy policy=new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
         startStopRunnable = (Button)findViewById(R.id.startStopRunnable);
         startStopRunnable.setOnClickListener(this);
+        serverTest = (Button)findViewById(R.id.serverTest);
+        serverTest.setOnClickListener(this);
         wekaLayout = (RelativeLayout)findViewById(R.id.WekaLayout);
     }
 
@@ -65,6 +76,9 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.startStopRunnable:
                 if(!runnableRunning)startRunnable();
                 else stopRunnable();
+                break;
+            case R.id.serverTest:
+                serverTest();
                 break;
             default:
                 break;
@@ -283,6 +297,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         return result;
     }
 
+    @SuppressLint("SimpleDateFormat")
     public void produceFinalResults()
     {
         double variance = (double)Math.round(calculateVariance() * 100d) / 100d;
@@ -313,10 +328,67 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
             fileWriter1.flush();
             fileWriter1.close();
 
-        } catch (IOException e) {
+        } catch (IOException e)
+        {
             e.printStackTrace();
         }
+    }
 
-        //Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
+    public void serverTest()
+    {
+
+        DataOutputStream dataOutputStream;
+        String filePath = String.valueOf(Environment.getExternalStorageDirectory())+"/test.jpg";
+        String lineEnd = "\r\n";
+        String twoHyphens = "--";
+        String boundary = "*****";
+        int bytesRead, bytesAvailable, bufferSize;
+        byte[] buffer;
+        int maxBufferSize = 1024 * 1024;
+        try
+        {
+            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
+            File sourceFile = new File(baseDir, "/test.jpg");
+            FileInputStream fileInputStream = new FileInputStream(sourceFile);
+            URL url = new URL(PHP_URL);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setDoInput(true); // Allow Inputs
+            conn.setDoOutput(true); // Allow Outputs
+            conn.setUseCaches(false); // Don't use a Cached Copy
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Connection", "Keep-Alive");
+            conn.setRequestProperty("ENCTYPE", "multipart/form-data");
+            conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+            conn.setRequestProperty("uploaded_file", filePath);
+
+            dataOutputStream = new DataOutputStream(conn.getOutputStream());
+
+            dataOutputStream.writeBytes(twoHyphens + boundary + lineEnd);
+            dataOutputStream.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + filePath + "\"" + lineEnd);
+            dataOutputStream.writeBytes(lineEnd);
+            bytesAvailable = fileInputStream.available();
+            bufferSize = Math.min(bytesAvailable, maxBufferSize);
+            buffer = new byte[bufferSize];
+            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            while (bytesRead > 0)
+            {
+                dataOutputStream.write(buffer, 0, bufferSize);
+                bytesAvailable = fileInputStream.available();
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            }
+            dataOutputStream.writeBytes(lineEnd);
+            dataOutputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+
+            fileInputStream.close();
+            dataOutputStream.flush();
+            dataOutputStream.close();
+
+
+        } catch (Exception e)
+        {
+            System.out.println("Error establishing a connection");
+        }
+
     }
 }
