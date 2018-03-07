@@ -16,11 +16,15 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -36,7 +40,7 @@ import weka.core.Instances;
 
 public class WekaActivity extends AppCompatActivity implements View.OnClickListener
 {
-    String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
+    String PHP_URL = "http://192.168.43.105/PHPScripts/test.php";
     static Classifier classifier = null;
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
@@ -336,9 +340,8 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
 
     public void serverTest()
     {
-
-        DataOutputStream dataOutputStream;
-        String filePath = String.valueOf(Environment.getExternalStorageDirectory())+"/test.jpg";
+        String filePath = String.valueOf(Environment.getExternalStorageDirectory())+"/sound.amr";
+        DataOutputStream dos;
         String lineEnd = "\r\n";
         String twoHyphens = "--";
         String boundary = "*****";
@@ -347,44 +350,54 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         int maxBufferSize = 1024 * 1024;
         try
         {
-            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
-            File sourceFile = new File(baseDir, "/test.jpg");
+            File sourceFile = new File(filePath);
             FileInputStream fileInputStream = new FileInputStream(sourceFile);
             URL url = new URL(PHP_URL);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setDoInput(true); // Allow Inputs
-            conn.setDoOutput(true); // Allow Outputs
-            conn.setUseCaches(false); // Don't use a Cached Copy
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setUseCaches(false);
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Connection", "Keep-Alive");
             conn.setRequestProperty("ENCTYPE", "multipart/form-data");
             conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
             conn.setRequestProperty("uploaded_file", filePath);
-
-            dataOutputStream = new DataOutputStream(conn.getOutputStream());
-
-            dataOutputStream.writeBytes(twoHyphens + boundary + lineEnd);
-            dataOutputStream.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + filePath + "\"" + lineEnd);
-            dataOutputStream.writeBytes(lineEnd);
+            dos = new DataOutputStream(conn.getOutputStream());
+            dos.writeBytes(twoHyphens + boundary + lineEnd);
+            dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + filePath + "\"" + lineEnd);
+            dos.writeBytes(lineEnd);
             bytesAvailable = fileInputStream.available();
             bufferSize = Math.min(bytesAvailable, maxBufferSize);
             buffer = new byte[bufferSize];
             bytesRead = fileInputStream.read(buffer, 0, bufferSize);
             while (bytesRead > 0)
             {
-                dataOutputStream.write(buffer, 0, bufferSize);
+                dos.write(buffer, 0, bufferSize);
                 bytesAvailable = fileInputStream.available();
                 bufferSize = Math.min(bytesAvailable, maxBufferSize);
                 bytesRead = fileInputStream.read(buffer, 0, bufferSize);
             }
-            dataOutputStream.writeBytes(lineEnd);
-            dataOutputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+            dos.writeBytes(lineEnd);
+            dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+            int serverResponseCode = conn.getResponseCode();
+            String serverResponseMessage = conn.getResponseMessage();
+            Log.i("Upload Data: ", "HTTP Response is : " + serverResponseMessage + ": " + serverResponseCode);
+
+            String line,result;
+            InputStream is = new BufferedInputStream(conn.getInputStream());
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
+            StringBuilder stringBuilder = new StringBuilder();
+            while ((line = reader.readLine()) != null)
+            {
+                stringBuilder.append(line).append("\n");
+            }
+            result = stringBuilder.toString();
+            Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
+            is.close();
 
             fileInputStream.close();
-            dataOutputStream.flush();
-            dataOutputStream.close();
-
-
+            dos.flush();
+            dos.close();
         } catch (Exception e)
         {
             System.out.println("Error establishing a connection");
