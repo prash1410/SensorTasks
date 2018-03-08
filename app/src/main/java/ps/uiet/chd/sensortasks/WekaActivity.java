@@ -51,7 +51,6 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
     double initX,initY,initZ;
     boolean runnableRunning = false;
     Button startStopRunnable, serverTest;
-    RelativeLayout wekaLayout;
     static int sampleCount = 0;
 
     SensorManager AccelerometerManager;
@@ -69,7 +68,6 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         startStopRunnable.setOnClickListener(this);
         serverTest = (Button)findViewById(R.id.serverTest);
         serverTest.setOnClickListener(this);
-        wekaLayout = (RelativeLayout)findViewById(R.id.WekaLayout);
     }
 
     @Override
