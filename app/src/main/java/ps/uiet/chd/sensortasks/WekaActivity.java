@@ -40,7 +40,7 @@ import weka.core.Instances;
 
 public class WekaActivity extends AppCompatActivity implements View.OnClickListener
 {
-    String PHP_URL = "http://192.168.43.105/PHPScripts/test.php";
+    String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
     static Classifier classifier = null;
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
