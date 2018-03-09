@@ -6,14 +6,16 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaRecorder;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.RelativeLayout;
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 import java.io.BufferedInputStream;
@@ -30,6 +32,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import au.com.bytecode.opencsv.CSVWriter;
@@ -40,6 +43,8 @@ import weka.core.Instances;
 
 public class WekaActivity extends AppCompatActivity implements View.OnClickListener
 {
+    String lastFile = "";
+    int drivingCounter = 0;
     String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
     static Classifier classifier = null;
     ArrayList <Double> xMagList = new ArrayList<>();
@@ -49,13 +54,18 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
     double xAngleGravity = 0,yAngleGravity = 0,zAngleGravity = 0;
     double gravity[] = new double[3];
     double initX,initY,initZ;
-    boolean runnableRunning = false;
-    Button startStopRunnable, serverTest;
+    boolean runnableRunning = false, recording = false;
+    Button startStopRunnable, serverTest, startStopRecording;
     static int sampleCount = 0;
+
+    MediaRecorder mediaRecorder;
+    String rootDirectory = "";
 
     SensorManager AccelerometerManager;
     Sensor Accelerometer;
     SensorEventListener AccelerometerListener;
+
+    CheckBox sendData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -68,6 +78,10 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         startStopRunnable.setOnClickListener(this);
         serverTest = (Button)findViewById(R.id.serverTest);
         serverTest.setOnClickListener(this);
+        startStopRecording = (Button)findViewById(R.id.startStopRecording);
+        startStopRecording.setOnClickListener(this);
+        sendData = (CheckBox)findViewById(R.id.sendData);
+        createDirectoryIfNotExists();
     }
 
     @Override
@@ -81,6 +95,10 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.serverTest:
                 serverTest();
+                break;
+            case R.id.startStopRecording:
+                if(!recording)startRecording();
+                else stopRecording();
                 break;
             default:
                 break;
@@ -308,6 +326,8 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         int zZeroCrossings = getZeroCrossings(zMagList);
 
         String result = wekaPredict(variance,xZeroCrossings,yZeroCrossings,zZeroCrossings);
+        if(result.equals("Driving"))drivingCounter++;
+        else drivingCounter = 0;
         SimpleDateFormat simpleDateFormat;
         Calendar calender = Calendar.getInstance();
         simpleDateFormat = new SimpleDateFormat("hh:mm:s a");
@@ -315,16 +335,14 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
 
         try
         {
-            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
-            File csvFile = new File(baseDir, "/Alarms/Output.csv");
+            File csvFile = new File(rootDirectory+"/CSVData/Output.csv");
             FileWriter fileWriter = new FileWriter(csvFile,true);
             CSVWriter writer = new CSVWriter(fileWriter);
             String[] data = {""+variance, ""+xZeroCrossings,""+yZeroCrossings,""+zZeroCrossings};
             writer.writeNext(data);
             writer.close();
 
-            File logs = new File(String.valueOf(Environment.getExternalStorageDirectory()));
-            File logsFile = new File(logs, "/Alarms/Activity Log.txt");
+            File logsFile = new File(rootDirectory+"/CSVData/Activity Log.txt");
             FileWriter fileWriter1 = new FileWriter(logsFile,true);
             fileWriter1.write(result+" "+time+"\n");
             fileWriter1.flush();
@@ -334,11 +352,13 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         {
             e.printStackTrace();
         }
+
+        if(drivingCounter>=5 && !recording)getSoundSample();
+
     }
 
     public void serverTest()
     {
-        String filePath = String.valueOf(Environment.getExternalStorageDirectory())+"/sound.amr";
         DataOutputStream dos;
         String lineEnd = "\r\n";
         String twoHyphens = "--";
@@ -348,7 +368,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         int maxBufferSize = 1024 * 1024;
         try
         {
-            File sourceFile = new File(filePath);
+            File sourceFile = new File(lastFile);
             FileInputStream fileInputStream = new FileInputStream(sourceFile);
             URL url = new URL(PHP_URL);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -359,10 +379,10 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
             conn.setRequestProperty("Connection", "Keep-Alive");
             conn.setRequestProperty("ENCTYPE", "multipart/form-data");
             conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-            conn.setRequestProperty("uploaded_file", filePath);
+            conn.setRequestProperty("uploaded_file", lastFile);
             dos = new DataOutputStream(conn.getOutputStream());
             dos.writeBytes(twoHyphens + boundary + lineEnd);
-            dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + filePath + "\"" + lineEnd);
+            dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + lastFile + "\"" + lineEnd);
             dos.writeBytes(lineEnd);
             bytesAvailable = fileInputStream.available();
             bufferSize = Math.min(bytesAvailable, maxBufferSize);
@@ -400,6 +420,66 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         {
             System.out.println("Error establishing a connection");
         }
-
     }
+
+    public void startRecording()
+    {
+        SimpleDateFormat sdf = new SimpleDateFormat("HH_mm_ss__dd_MM_yyyy");
+        String currentTimestamp = sdf.format(new Date());
+
+        lastFile = rootDirectory+"/AudioData/Sample_"+currentTimestamp+".amr";
+        try
+        {
+            mediaRecorder = new MediaRecorder();
+            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_WB);
+            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
+            mediaRecorder.setOutputFile(lastFile);
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+
+        startStopRecording.setText("Stop Recording");
+        recording = true;
+    }
+
+    public void stopRecording()
+    {
+        if(mediaRecorder!=null)
+        {
+            mediaRecorder.stop();
+            mediaRecorder.release();
+            mediaRecorder = null;
+        }
+        startStopRecording.setText("Start Recording");
+        recording = false;
+    }
+
+    public void createDirectoryIfNotExists()
+    {
+        File csvFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/CSVData");
+        File audioFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/AudioData");
+        if(!csvFolder.exists())csvFolder.mkdirs();
+        if(!audioFolder.exists())audioFolder.mkdirs();
+        rootDirectory = Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData";
+    }
+
+    public void getSoundSample()
+    {
+        startRecording();
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                stopRecording();
+                if(sendData.isChecked())serverTest();
+            }
+        }, 5000);
+    }
+
 }

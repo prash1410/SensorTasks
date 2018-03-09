@@ -25,4 +25,24 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/serverTest"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:text="Start recording"
+        android:id="@+id/startStopRecording"/>
+
+    <CheckBox
+        android:id="@+id/sendData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:checked="false"
+        android:layout_below="@+id/startStopRecording"
+        android:layout_marginTop="50dp"
+        android:textColor="#ffffff"
+        android:text="Send audio data"/>
+
 </RelativeLayout>
