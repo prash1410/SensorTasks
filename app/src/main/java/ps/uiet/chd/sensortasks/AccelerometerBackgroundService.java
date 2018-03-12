@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
@@ -32,6 +33,7 @@ import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
+    static int deviceID;
     String lastFile = "";
     int drivingCounter = 0;
     //String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
@@ -58,6 +60,7 @@ public class AccelerometerBackgroundService extends Service
     {
         super.onCreate();
         createDirectoryIfNotExists();
+        deviceID = createDeviceID();
     }
 
     @Nullable
@@ -389,5 +392,13 @@ public class AccelerometerBackgroundService extends Service
             mediaRecorder = null;
         }
         recording = false;
+    }
+
+    public int createDeviceID()
+    {
+        Random r = new Random();
+        int Low = 1000;
+        int High = 10000;
+        return r.nextInt(High-Low) + Low;
     }
 }

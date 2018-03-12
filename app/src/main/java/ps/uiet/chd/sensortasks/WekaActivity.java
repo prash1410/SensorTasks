@@ -18,15 +18,11 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -34,6 +30,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
@@ -43,6 +41,7 @@ import weka.core.Instances;
 
 public class WekaActivity extends AppCompatActivity implements View.OnClickListener
 {
+    static int deviceID;
     String lastFile = "";
     int drivingCounter = 0;
     String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
@@ -82,6 +81,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         startStopRecording.setOnClickListener(this);
         sendData = (CheckBox)findViewById(R.id.sendData);
         createDirectoryIfNotExists();
+        deviceID = createDeviceID();
     }
 
     @Override
@@ -94,7 +94,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
                 else stopRunnable();
                 break;
             case R.id.serverTest:
-                serverTest();
+                testAsyncTask();
                 break;
             case R.id.startStopRecording:
                 if(!recording)startRecording();
@@ -400,19 +400,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
             int serverResponseCode = conn.getResponseCode();
             String serverResponseMessage = conn.getResponseMessage();
             Log.i("Upload Data: ", "HTTP Response is : " + serverResponseMessage + ": " + serverResponseCode);
-
-            String line,result;
-            InputStream is = new BufferedInputStream(conn.getInputStream());
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
-            StringBuilder stringBuilder = new StringBuilder();
-            while ((line = reader.readLine()) != null)
-            {
-                stringBuilder.append(line).append("\n");
-            }
-            result = stringBuilder.toString();
-            Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
-            is.close();
-
+            if(serverResponseMessage.equals("OK") && serverResponseCode==200)Toast.makeText(getApplicationContext(),"Upload successful",Toast.LENGTH_SHORT).show();
             fileInputStream.close();
             dos.flush();
             dos.close();
@@ -480,6 +468,27 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
                 if(sendData.isChecked())serverTest();
             }
         }, 5000);
+    }
+
+    public void testAsyncTask()
+    {
+        try
+        {
+            String uploadResult = new uploadSampleTask().execute(lastFile).get();
+            Toast.makeText(getApplicationContext(),uploadResult,Toast.LENGTH_SHORT).show();
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public int createDeviceID()
+    {
+        Random r = new Random();
+        int Low = 1000;
+        int High = 10000;
+        return r.nextInt(High-Low) + Low;
     }
 
 }
