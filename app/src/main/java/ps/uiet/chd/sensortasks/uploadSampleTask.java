@@ -6,6 +6,7 @@ import android.util.Log;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -15,7 +16,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
     @Override
     protected Integer doInBackground(String... strings)
     {
-        int serverResponseCode = -1;
+        int serverResponseCode;
         String lastFile = strings[0];
         String deviceID = strings[1];
         String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
@@ -36,6 +37,8 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
             conn.setDoOutput(true);
             conn.setUseCaches(false);
             conn.setRequestMethod("POST");
+            conn.setConnectTimeout(500);
+            conn.setReadTimeout(500);
             conn.setRequestProperty("Connection", "Keep-Alive");
             conn.setRequestProperty("ENCTYPE", "multipart/form-data");
             conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
@@ -76,9 +79,10 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
 
             dos.flush();
             dos.close();
-        } catch (Exception e)
+        } catch (IOException e)
         {
-            System.out.println("Error establishing a connection");
+            e.printStackTrace();
+            return -1;
         }
 
         return serverResponseCode;

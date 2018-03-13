@@ -34,6 +34,7 @@ import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
+    final Handler handler = new Handler();
     static int deviceID;
     String lastFile = "";
     int drivingCounter = 0;
@@ -83,7 +84,11 @@ public class AccelerometerBackgroundService extends Service
     {
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
         if(accelerometerActive)deactivateAccelerometer();
-        if(recording)stopRecording();
+        if(recording)
+        {
+            stopRecording();
+            handler.removeCallbacksAndMessages(null);
+        }
     }
 
     public void createDirectoryIfNotExists()
@@ -349,7 +354,6 @@ public class AccelerometerBackgroundService extends Service
     public void getSoundSample()
     {
         startRecording();
-        final Handler handler = new Handler();
         handler.postDelayed(new Runnable()
         {
             @Override
@@ -416,6 +420,7 @@ public class AccelerometerBackgroundService extends Service
         {
             int uploadResult = new uploadSampleTask().execute(lastFile,""+deviceID).get();
             if(uploadResult==200) (new File(lastFile)).delete();
+            Toast.makeText(getApplicationContext(),""+uploadResult,Toast.LENGTH_SHORT).show();
         }
         catch (InterruptedException | ExecutionException e)
         {
