@@ -24,6 +24,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
@@ -36,7 +37,6 @@ public class AccelerometerBackgroundService extends Service
     static int deviceID;
     String lastFile = "";
     int drivingCounter = 0;
-    //String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
     static Classifier classifier = null;
     ArrayList<Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
@@ -221,7 +221,7 @@ public class AccelerometerBackgroundService extends Service
             e.printStackTrace();
         }
 
-        if(drivingCounter>=5 && !recording)getSoundSample();
+        if(drivingCounter>=10 && !recording)getSoundSample();
 
     }
 
@@ -357,8 +357,9 @@ public class AccelerometerBackgroundService extends Service
             {
                 stopRecording();
                 Toast.makeText(getApplicationContext(),"Recording saved",Toast.LENGTH_SHORT).show();
+                sendSoundSample();
             }
-        }, 5000);
+        }, 10000);
     }
 
     public void startRecording()
@@ -376,7 +377,7 @@ public class AccelerometerBackgroundService extends Service
             mediaRecorder.setOutputFile(lastFile);
             mediaRecorder.prepare();
             mediaRecorder.start();
-        } catch (IOException e)
+        } catch (IOException | IllegalStateException e)
         {
             e.printStackTrace();
         }
@@ -387,9 +388,16 @@ public class AccelerometerBackgroundService extends Service
     {
         if(mediaRecorder!=null)
         {
-            mediaRecorder.stop();
-            mediaRecorder.release();
-            mediaRecorder = null;
+            try
+            {
+                mediaRecorder.stop();
+                mediaRecorder.release();
+                mediaRecorder = null;
+
+            }catch (IllegalStateException e)
+            {
+                e.printStackTrace();
+            }
         }
         recording = false;
     }
@@ -400,5 +408,18 @@ public class AccelerometerBackgroundService extends Service
         int Low = 1000;
         int High = 10000;
         return r.nextInt(High-Low) + Low;
+    }
+
+    public void sendSoundSample()
+    {
+        try
+        {
+            int uploadResult = new uploadSampleTask().execute(lastFile,""+deviceID).get();
+            if(uploadResult==200) (new File(lastFile)).delete();
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
+            e.printStackTrace();
+        }
     }
 }

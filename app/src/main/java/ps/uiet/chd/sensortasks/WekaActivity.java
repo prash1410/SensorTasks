@@ -474,8 +474,8 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
     {
         try
         {
-            String uploadResult = new uploadSampleTask().execute(lastFile).get();
-            Toast.makeText(getApplicationContext(),uploadResult,Toast.LENGTH_SHORT).show();
+            int uploadResult = new uploadSampleTask().execute(lastFile,""+deviceID).get();
+            Toast.makeText(getApplicationContext(),""+uploadResult,Toast.LENGTH_SHORT).show();
         }
         catch (InterruptedException | ExecutionException e)
         {

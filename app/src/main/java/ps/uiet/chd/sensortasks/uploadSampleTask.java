@@ -3,24 +3,21 @@ package ps.uiet.chd.sensortasks;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class uploadSampleTask extends AsyncTask<String, Integer, String>
+public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
 {
 
     @Override
-    protected String doInBackground(String... strings)
+    protected Integer doInBackground(String... strings)
     {
-        String output = "";
         int serverResponseCode = -1;
         String lastFile = strings[0];
+        String deviceID = strings[1];
         String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
         DataOutputStream dos;
         String lineEnd = "\r\n";
@@ -44,7 +41,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, String>
             conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
             dos = new DataOutputStream(conn.getOutputStream());
             dos.writeBytes(twoHyphens + boundary + lineEnd);
-            dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\"; filename=\"" + lastFile+"deviceID:2555 " + "\"" + lineEnd);
+            dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\"; filename=\"" + lastFile+";"+deviceID + "\"" + lineEnd);
             dos.writeBytes(lineEnd);
             bytesAvailable = fileInputStream.available();
             bufferSize = Math.min(bytesAvailable, maxBufferSize);
@@ -64,6 +61,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, String>
             Log.i("AcousticSampleUpload: ", "HTTP Response is : " + serverResponseMessage + ": " + serverResponseCode);
             fileInputStream.close();
 
+            /*
             InputStream input = conn.getInputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(input));
             StringBuilder result = new StringBuilder();
@@ -74,8 +72,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, String>
             }
             output = result.toString();
             input.close();
-
-            // Pass data to onPostExecute method
+            */
 
             dos.flush();
             dos.close();
@@ -84,12 +81,11 @@ public class uploadSampleTask extends AsyncTask<String, Integer, String>
             System.out.println("Error establishing a connection");
         }
 
-        return output;
+        return serverResponseCode;
     }
 
     @Override
-    protected void onPostExecute(String string)
-    {
-        super.onPostExecute(string);
+    protected void onPostExecute(Integer integer) {
+        super.onPostExecute(integer);
     }
 }
