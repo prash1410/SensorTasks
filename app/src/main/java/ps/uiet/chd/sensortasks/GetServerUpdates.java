@@ -1,6 +1,8 @@
 package ps.uiet.chd.sensortasks;
 
+import android.annotation.SuppressLint;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.util.Log;
 
 import org.apache.http.HttpEntity;
@@ -14,6 +16,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
@@ -23,31 +27,32 @@ import java.util.List;
 public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
 {
 
+    @SuppressLint("SimpleDateFormat")
     @Override
     protected Integer doInBackground(String... strings)
     {
+        String deviceID = strings[0];
+        String PHP_URL = "http://192.168.42.67/PHPScripts/fetchResults.php";
         InputStream inputStream = null;
         String line;
         String result = null;
         try
         {
             HttpClient httpClient = new DefaultHttpClient();
-            HttpPost httpPost = new HttpPost(PHP_URL+"ConfusionMatrix.php"); //Connect with the server
-            List<NameValuePair> nameValuePairs = new ArrayList<>(2);
-            nameValuePairs.add(new BasicNameValuePair("Classifier", Classifier+"_cm"));
-            String Temp = Title.replaceAll("\\s+","");
-            String[] ScriptName = Temp.split("Classifier");
-            nameValuePairs.add(new BasicNameValuePair("ScriptName", ScriptName[0]+".py"));
+            HttpPost httpPost = new HttpPost(PHP_URL);
+            List<NameValuePair> nameValuePairs = new ArrayList<>();
+            nameValuePairs.add(new BasicNameValuePair("DeviceID", deviceID));
             try
             {
                 httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-            } catch (UnsupportedEncodingException e)
+            }
+            catch (UnsupportedEncodingException e)
             {
                 e.printStackTrace();
             }
-            org.apache.http.HttpResponse response = httpClient.execute(httpPost); //Get the file on the server
+            org.apache.http.HttpResponse response = httpClient.execute(httpPost);
             HttpEntity entity = response.getEntity();
-            inputStream = entity.getContent(); //Get the result of PHP script execution in Android inputstream
+            inputStream = entity.getContent();
 
         } catch (Exception e)
         {
@@ -56,11 +61,12 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
 
         try
         {
+            assert inputStream != null;
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "iso-8859-1"), 8);
             StringBuilder stringBuilder = new StringBuilder();
-            while ((line = reader.readLine()) != null) //Convert InputStream into String
+            while ((line = reader.readLine()) != null)
             {
-                stringBuilder.append(line + "\n");
+                stringBuilder.append(line).append("\n");
             }
             result = stringBuilder.toString();
             System.out.print(result);
@@ -71,8 +77,10 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
             System.out.println("Error fetching data");
         }
 
-        String temp1="Output Class:",temp2="DOS:",temp3="Normal:",temp4="Probe:",temp5="R2L:",temp6="U2R:";
-        String[] arr1,arr2,arr3,arr4,arr5,arr6;
+        StringBuilder temp1= new StringBuilder();
+        StringBuilder temp2= new StringBuilder();
+        StringBuilder temp3= new StringBuilder();
+        String[] arr1,arr2,arr3;
         try
         {
             JSONArray jsonArray = new JSONArray(result);
@@ -80,37 +88,22 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
             for (int i = 0; i < count; i++)
             {
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
-                temp1 += jsonObject.getString("Output_Class_CM") + ":";
-                temp2 += jsonObject.getString("DOS_CM") + ":";
-                temp3 += jsonObject.getString("Normal_CM") + ":";
-                temp4 += jsonObject.getString("Probe_CM") + ":";
-                temp5 += jsonObject.getString("R2L_CM") + ":";
-                temp6 += jsonObject.getString("U2R_CM") + ":";
+                temp1.append(jsonObject.getString("filename")).append(";");
+                temp2.append(jsonObject.getString("filesize")).append(";");
+                temp3.append(jsonObject.getString("timestamp")).append(";");
             }
-            arr1 = temp1.split(":");
-            arr2 = temp2.split(":");
-            arr3 = temp3.split(":");
-            arr4 = temp4.split(":");
-            arr5 = temp5.split(":");
-            arr6 = temp6.split(":");
-            int LeftMargin=0;
-            int TopMargin=0;
-            int j=0;
-            for(int i=1;i<=5;i++)
-            {
-                for(;j<6*i;j++)
-                {
+            arr1 = temp1.toString().split(";");
+            arr2 = temp2.toString().split(";");
+            arr3 = temp3.toString().split(";");
 
-                }
-                LeftMargin = 0;
-                TopMargin = TopMargin+136+2;
-            }
-            j=0;
-            for(int i=0;i<30;i=i+6)
+            File serverFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/AcousticData/ServerData/FetchedData.txt");
+            FileWriter fileWriter = new FileWriter(serverFile,true);
+            for(int i=0;i<arr1.length;i++)
             {
-                
-                j++;
+                fileWriter.write(arr1[i]+"   "+arr2[i]+"   "+arr3[i]+"\n");
             }
+            fileWriter.flush();
+            fileWriter.close();
 
         } catch (Exception e)
         {

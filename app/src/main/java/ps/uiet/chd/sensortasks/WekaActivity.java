@@ -450,6 +450,8 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
     {
         File csvFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/CSVData");
         File audioFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/AudioData");
+        File serverDataFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/ServerData");
+        if(!serverDataFolder.exists())serverDataFolder.mkdirs();
         if(!csvFolder.exists())csvFolder.mkdirs();
         if(!audioFolder.exists())audioFolder.mkdirs();
         rootDirectory = Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData";
@@ -490,5 +492,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         int High = 10000;
         return r.nextInt(High-Low) + Low;
     }
+
+
 
 }

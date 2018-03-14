@@ -34,7 +34,9 @@ import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
-    final Handler handler = new Handler();
+    Handler handler = null;
+    Handler serverTaskHandler = null;
+    Runnable serverTaskRunnable = null;
     static int deviceID;
     String lastFile = "";
     int drivingCounter = 0;
@@ -76,6 +78,17 @@ public class AccelerometerBackgroundService extends Service
     {
         Toast.makeText(this, "Service started", Toast.LENGTH_SHORT).show();
         if(!accelerometerActive)activateAccelerometer();
+        handler = new Handler();
+        serverTaskHandler = new Handler();
+        serverTaskRunnable = new Runnable()
+        {
+            public void run()
+            {
+                new GetServerUpdates().execute(""+deviceID);
+                serverTaskHandler.postDelayed(serverTaskRunnable, 20000);
+            }
+        };
+        serverTaskHandler.postDelayed(serverTaskRunnable, 30000);
         return Service.START_STICKY_COMPATIBILITY;
     }
 
@@ -89,12 +102,15 @@ public class AccelerometerBackgroundService extends Service
             stopRecording();
             handler.removeCallbacksAndMessages(null);
         }
+        serverTaskHandler.removeCallbacksAndMessages(null);
     }
 
     public void createDirectoryIfNotExists()
     {
         File csvFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/CSVData");
         File audioFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/AudioData");
+        File serverDataFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/ServerData");
+        if(!serverDataFolder.exists())serverDataFolder.mkdirs();
         if(!csvFolder.exists())csvFolder.mkdirs();
         if(!audioFolder.exists())audioFolder.mkdirs();
         rootDirectory = Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData";
@@ -398,7 +414,7 @@ public class AccelerometerBackgroundService extends Service
                 mediaRecorder.release();
                 mediaRecorder = null;
 
-            }catch (IllegalStateException e)
+            }catch (RuntimeException e)
             {
                 e.printStackTrace();
             }
