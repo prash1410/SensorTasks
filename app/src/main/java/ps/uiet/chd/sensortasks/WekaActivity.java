@@ -9,6 +9,7 @@ import android.hardware.SensorManager;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,6 +18,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Toast;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.SettingsClient;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -31,7 +40,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
@@ -41,6 +49,10 @@ import weka.core.Instances;
 
 public class WekaActivity extends AppCompatActivity implements View.OnClickListener
 {
+    String lastLocation = "";
+    FusedLocationProviderClient fusedLocationProviderClient;
+    LocationCallback locationCallback;
+
     static int deviceID;
     String lastFile = "";
     int drivingCounter = 0;
@@ -474,15 +486,9 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
 
     public void testAsyncTask()
     {
-        try
-        {
-            int uploadResult = new uploadSampleTask().execute(lastFile,""+deviceID).get();
-            Toast.makeText(getApplicationContext(),""+uploadResult,Toast.LENGTH_SHORT).show();
-        }
-        catch (InterruptedException | ExecutionException e)
-        {
-            e.printStackTrace();
-        }
+        //String locationResult = new GetLocationTask(getApplicationContext()).execute().get();
+        //Toast.makeText(getApplicationContext(),locationResult,Toast.LENGTH_LONG).show();
+        locationMethod();
     }
 
     public int createDeviceID()
@@ -493,6 +499,50 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         return r.nextInt(High-Low) + Low;
     }
 
+    @SuppressLint("MissingPermission")
+    public void locationMethod()
+    {
+        try
+        {
+            LocationRequest locationRequest = new LocationRequest();
+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            locationRequest.setInterval(500);
+            locationRequest.setFastestInterval(500);
 
+            LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+            builder.addLocationRequest(locationRequest);
+            LocationSettingsRequest locationSettingsRequest = builder.build();
 
+            SettingsClient settingsClient = LocationServices.getSettingsClient(getApplicationContext());
+            settingsClient.checkLocationSettings(locationSettingsRequest);
+
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
+            locationCallback = new LocationCallback()
+            {
+                @Override
+                public void onLocationResult(LocationResult locationResult)
+                {
+                    String latitude = String.valueOf(locationResult.getLastLocation().getLatitude());
+                    String longitude = String.valueOf(locationResult.getLastLocation().getLongitude());
+                    lastLocation = "Latitude: "+latitude+"\nLongitude: "+longitude;
+                    Toast.makeText(getApplicationContext(),lastLocation,Toast.LENGTH_SHORT).show();
+                }
+            };
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest,locationCallback,Looper.myLooper());
+
+            final Handler handler = new Handler();
+            handler.postDelayed(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+                }
+            }, 6000);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 }

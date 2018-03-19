@@ -18,7 +18,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
     {
         int serverResponseCode;
         String lastFile = strings[0];
-        String deviceID = strings[1];
+        String deviceIDLocationBundle = strings[1];
         String PHP_URL = "http://192.168.42.67/PHPScripts/test.php";
         DataOutputStream dos;
         String lineEnd = "\r\n";
@@ -44,7 +44,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
             conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
             dos = new DataOutputStream(conn.getOutputStream());
             dos.writeBytes(twoHyphens + boundary + lineEnd);
-            dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\"; filename=\"" + lastFile+";"+deviceID + "\"" + lineEnd);
+            dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\"; filename=\"" + lastFile+";"+deviceIDLocationBundle + "\"" + lineEnd);
             dos.writeBytes(lineEnd);
             bytesAvailable = fileInputStream.available();
             bufferSize = Math.min(bytesAvailable, maxBufferSize);
