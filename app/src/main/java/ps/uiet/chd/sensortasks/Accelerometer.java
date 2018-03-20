@@ -25,6 +25,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -236,7 +237,16 @@ public class Accelerometer extends AppCompatActivity
             yZeroCrossings = getZeroCrossings(yMagList);
             zZeroCrossings = getZeroCrossings(zMagList);
 
-            AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
+
+            double maxValue = Collections.max(observations);
+            double cutOff = maxValue*0.8;
+            int greaterCounter = 0;
+            for(double element:observations)
+            {
+                if(element>=cutOff)greaterCounter++;
+            }
+
+            AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings+"\n"+greaterCounter);
             writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
             writer.flush();
             writer.close();
