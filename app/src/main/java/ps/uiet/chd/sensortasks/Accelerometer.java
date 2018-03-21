@@ -239,12 +239,9 @@ public class Accelerometer extends AppCompatActivity
 
 
             double maxValue = Collections.max(observations);
-            double cutOff = maxValue*0.8;
+            double cutOff = maxValue*0.95;
             int greaterCounter = 0;
-            for(double element:observations)
-            {
-                if(element>=cutOff)greaterCounter++;
-            }
+            for(double element:observations) if(element>=cutOff)greaterCounter++;
 
             AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings+"\n"+greaterCounter);
             writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);

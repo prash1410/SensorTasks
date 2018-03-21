@@ -30,10 +30,10 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
@@ -43,6 +43,8 @@ import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
+    Toast testToast;
+
     String lastLocation;
     FusedLocationProviderClient fusedLocationProviderClient;
     LocationCallback locationCallback;
@@ -167,12 +169,16 @@ public class AccelerometerBackgroundService extends Service
                     resultant.add(total);
                 }
                 if (sampleCount == 34) produceFinalResults();
-                if (sampleCount > 35 && (sampleCount + 1) % 5 == 0) {
+                if (sampleCount > 35 && (sampleCount - 4) % 10 == 0)
+                {
                     trimArrayLists();
                     produceFinalResults();
                 }
                 if (sampleCount == 10000)
+                {
                     stopService(new Intent(getApplicationContext(), AccelerometerBackgroundService.class));
+                    startService(new Intent(getApplicationContext(), AccelerometerBackgroundService.class));
+                }
 
                 sampleCount++;
             }
@@ -219,7 +225,7 @@ public class AccelerometerBackgroundService extends Service
     @SuppressLint("SimpleDateFormat")
     public void produceFinalResults()
     {
-        double variance = (double) Math.round(calculateVariance() * 100d) / 100d;
+        double variance = calculateVariance();
         int xZeroCrossings = getZeroCrossings(xMagList);
         int yZeroCrossings = getZeroCrossings(yMagList);
         int zZeroCrossings = getZeroCrossings(zMagList);
@@ -232,7 +238,8 @@ public class AccelerometerBackgroundService extends Service
         simpleDateFormat = new SimpleDateFormat("hh:mm:s a");
         String time = simpleDateFormat.format(calender.getTime());
 
-        try {
+        try
+        {
             File csvFile = new File(rootDirectory + "/CSVData/Output.csv");
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
@@ -250,7 +257,7 @@ public class AccelerometerBackgroundService extends Service
             e.printStackTrace();
         }
 
-        if (drivingCounter >= 10 && !recording)
+        if (drivingCounter >= 7 && !recording)
         {
             getSoundSample();
             getLocation();
@@ -260,14 +267,15 @@ public class AccelerometerBackgroundService extends Service
 
     public void trimArrayLists()
     {
-        for (int i = 5; i < xMagList.size(); i++) {
-            xMagList.set(i - 5, xMagList.get(i));
-            yMagList.set(i - 5, yMagList.get(i));
-            zMagList.set(i - 5, zMagList.get(i));
-            resultant.set(i - 5, resultant.get(i));
+        for (int i = 10; i < xMagList.size(); i++) {
+            xMagList.set(i - 10, xMagList.get(i));
+            yMagList.set(i - 10, yMagList.get(i));
+            zMagList.set(i - 10, zMagList.get(i));
+            resultant.set(i - 10, resultant.get(i));
         }
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++)
+        {
             xMagList.remove(30);
             yMagList.remove(30);
             zMagList.remove(30);
@@ -278,18 +286,28 @@ public class AccelerometerBackgroundService extends Service
     public double calculateVariance()
     {
         int count = resultant.size();
+        double maxValue = Collections.max(resultant);
+        double cutoffValue = maxValue*0.95;
         double sum = 0;
-        for (double tempElement : resultant) {
+        int cutoffCounter = 0;
+        for (double tempElement : resultant)
+        {
             sum = sum + tempElement;
+            if(tempElement>=cutoffValue)cutoffCounter++;
         }
         double average = sum / count;
         double squareSum = 0;
-        for (double tempElement : resultant) {
+        for (double tempElement : resultant)
+        {
             double temp = tempElement - average;
             temp = temp * temp;
             squareSum = squareSum + temp;
         }
-        return squareSum / count;
+        double variance = Math.round((squareSum / count) * 100d) / 100d;
+        if(testToast==null)testToast = Toast.makeText(getApplicationContext(),""+variance+"\n"+cutoffCounter,Toast.LENGTH_SHORT);
+        testToast.setText(""+variance+"\n"+cutoffCounter);
+        testToast.show();
+        return variance;
     }
 
     public int getZeroCrossings(ArrayList<Double> magList)
@@ -373,7 +391,6 @@ public class AccelerometerBackgroundService extends Service
             @Override
             public void run() {
                 stopRecording();
-                Toast.makeText(getApplicationContext(), "Recording saved", Toast.LENGTH_SHORT).show();
                 sendSoundSample();
             }
         }, 10000);
@@ -424,14 +441,16 @@ public class AccelerometerBackgroundService extends Service
 
     public void sendSoundSample()
     {
+        /*
         try
         {
             int uploadResult = new uploadSampleTask().execute(lastFile, "" + deviceID+";"+lastLocation).get();
             if (uploadResult == 200) (new File(lastFile)).delete();
-            Toast.makeText(getApplicationContext(), "" + uploadResult, Toast.LENGTH_SHORT).show();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
+        */
+        Toast.makeText(getApplicationContext(),"Driving!!!!!!",Toast.LENGTH_SHORT).show();
     }
 
     @SuppressLint("MissingPermission")
