@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         LocationButton.setOnClickListener(this);
         AccelerometerService = (Button)findViewById(R.id.AccelerometerServiceButton);
         AccelerometerService.setOnClickListener(this);
-        wekaButton = (Button)findViewById(R.id.wekaButton);
+        wekaButton = (Button)findViewById(R.id.dataCollectionButton);
         wekaButton.setOnClickListener(this);
         MainActivityLayout = (RelativeLayout)findViewById(R.id.MainActivityLayout);
         ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     ServiceStarted = false;
                 }
                 break;
-            case R.id.wekaButton:
+            case R.id.dataCollectionButton:
                 Intent intent3 = new Intent(getApplicationContext(),WekaActivity.class);
                 startActivity(intent3);
                 break;
