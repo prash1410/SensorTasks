@@ -85,13 +85,13 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_weka);
         StrictMode.ThreadPolicy policy=new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
-        startStopRunnable = (Button)findViewById(R.id.startStopRunnable);
+        startStopRunnable = findViewById(R.id.startStopRunnable);
         startStopRunnable.setOnClickListener(this);
-        serverTest = (Button)findViewById(R.id.serverTest);
+        serverTest = findViewById(R.id.serverTest);
         serverTest.setOnClickListener(this);
-        startStopRecording = (Button)findViewById(R.id.startStopRecording);
+        startStopRecording = findViewById(R.id.startStopRecording);
         startStopRecording.setOnClickListener(this);
-        sendData = (CheckBox)findViewById(R.id.sendData);
+        sendData = findViewById(R.id.sendData);
         createDirectoryIfNotExists();
         deviceID = createDeviceID();
     }
@@ -504,7 +504,7 @@ public class WekaActivity extends AppCompatActivity implements View.OnClickListe
     {
         try
         {
-            LocationRequest locationRequest = new LocationRequest();
+            @SuppressLint("RestrictedApi") LocationRequest locationRequest = new LocationRequest();
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationRequest.setInterval(500);
             locationRequest.setFastestInterval(500);

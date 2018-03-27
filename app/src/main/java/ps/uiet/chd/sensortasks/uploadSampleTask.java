@@ -72,19 +72,6 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
             String serverResponseMessage = conn.getResponseMessage();
             Log.i("AcousticSampleUpload: ", "HTTP Response is : " + serverResponseMessage + ": " + serverResponseCode);
             fileInputStream.close();
-
-            /*
-            InputStream input = conn.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-            StringBuilder result = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null)
-            {
-                result.append(line);
-            }
-            output = result.toString();
-            input.close();
-            */
             dos.flush();
             dos.close();
             conn.disconnect();
@@ -92,9 +79,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
         {
             e.printStackTrace();
             return -1;
-
         }
-
         return serverResponseCode;
     }
 

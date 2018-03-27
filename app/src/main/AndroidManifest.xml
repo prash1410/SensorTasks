@@ -46,6 +46,7 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <activity android:name=".WekaActivity" />
+        <activity android:name=".dataCollection"></activity>
     </application>
 
 </manifest>
