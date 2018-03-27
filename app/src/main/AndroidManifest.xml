@@ -20,8 +20,6 @@
         android:required="true" />
     <uses-feature android:name="android.hardware.location.gps" />
 
-    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -47,7 +45,7 @@
             android:enabled="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <activity android:name=".WekaActivity"></activity>
+        <activity android:name=".WekaActivity" />
     </application>
 
 </manifest>

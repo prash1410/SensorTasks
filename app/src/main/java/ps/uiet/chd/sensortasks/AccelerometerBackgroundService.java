@@ -30,10 +30,10 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
@@ -43,8 +43,6 @@ import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
-    Toast testToast;
-
     String lastLocation;
     FusedLocationProviderClient fusedLocationProviderClient;
     LocationCallback locationCallback;
@@ -286,15 +284,8 @@ public class AccelerometerBackgroundService extends Service
     public double calculateVariance()
     {
         int count = resultant.size();
-        double maxValue = Collections.max(resultant);
-        double cutoffValue = maxValue*0.95;
         double sum = 0;
-        int cutoffCounter = 0;
-        for (double tempElement : resultant)
-        {
-            sum = sum + tempElement;
-            if(tempElement>=cutoffValue)cutoffCounter++;
-        }
+        for(double tempElement:resultant)sum = sum+tempElement;
         double average = sum / count;
         double squareSum = 0;
         for (double tempElement : resultant)
@@ -303,11 +294,7 @@ public class AccelerometerBackgroundService extends Service
             temp = temp * temp;
             squareSum = squareSum + temp;
         }
-        double variance = Math.round((squareSum / count) * 100d) / 100d;
-        if(testToast==null)testToast = Toast.makeText(getApplicationContext(),""+variance+"\n"+cutoffCounter,Toast.LENGTH_SHORT);
-        testToast.setText(""+variance+"\n"+cutoffCounter);
-        testToast.show();
-        return variance;
+        return Math.round((squareSum / count) * 100d) / 100d;
     }
 
     public int getZeroCrossings(ArrayList<Double> magList)
@@ -441,7 +428,7 @@ public class AccelerometerBackgroundService extends Service
 
     public void sendSoundSample()
     {
-        /*
+
         try
         {
             int uploadResult = new uploadSampleTask().execute(lastFile, "" + deviceID+";"+lastLocation).get();
@@ -449,7 +436,7 @@ public class AccelerometerBackgroundService extends Service
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
-        */
+
         Toast.makeText(getApplicationContext(),"Driving!!!!!!",Toast.LENGTH_SHORT).show();
     }
 
@@ -457,7 +444,7 @@ public class AccelerometerBackgroundService extends Service
     public void getLocation()
     {
         try {
-            LocationRequest locationRequest = new LocationRequest();
+            @SuppressLint("RestrictedApi") LocationRequest locationRequest = new LocationRequest();
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationRequest.setInterval(500);
             locationRequest.setFastestInterval(500);

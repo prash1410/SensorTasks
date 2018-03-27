@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
+    compileSdkVersion 27
     defaultConfig {
         applicationId "ps.uiet.chd.sensortasks"
         minSdkVersion 19
         multiDexEnabled true
-        targetSdkVersion 25
+        targetSdkVersion 27
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -30,14 +30,14 @@ android {
 }
 dependencies
         {
-            compile 'org.apache.httpcomponents:httpcore:4.4.7'
-            compile 'org.apache.httpcomponents:httpclient:4.5.4'
-            compile 'net.sf.opencsv:opencsv:2.3'
-            compile 'com.android.support:design:25.4.0'
-            compile 'com.google.android.gms:play-services:11.8.0'
-            compile 'com.google.android.gms:play-services-location:11.8.0'
+            implementation 'org.apache.httpcomponents:httpcore:4.4.7'
+            implementation 'org.apache.httpcomponents:httpclient:4.5.4'
+            implementation 'net.sf.opencsv:opencsv:2.3'
+            implementation 'com.android.support:design:27.1.0'
+            implementation 'com.google.android.gms:play-services:12.0.0'
+            implementation 'com.google.android.gms:play-services-location:12.0.0'
             implementation fileTree(include: ['*.jar'], dir: 'libs')
-            implementation 'com.android.support:appcompat-v7:25.4.0'
+            implementation 'com.android.support:appcompat-v7:27.1.0'
             implementation 'com.android.support.constraint:constraint-layout:1.0.2'
             testImplementation 'junit:junit:4.12'
             androidTestImplementation 'com.android.support.test:runner:1.0.1'

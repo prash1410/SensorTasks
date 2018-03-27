@@ -13,6 +13,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -32,10 +35,8 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
     @Override
     protected Integer doInBackground(String... strings)
     {
-        if(!connectionCheck()){
-            Log.e("ServerError: ","Server unreachable");
-            return -1;
-        }
+        Log.e("Info: ","Server update request");
+
         String deviceID = strings[0];
         String PHP_URL = "http://192.168.42.67/PHPScripts/fetchResults.php";
         InputStream inputStream = null;
@@ -43,7 +44,10 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
         String result = null;
         try
         {
-            HttpClient httpClient = new DefaultHttpClient();
+            HttpParams params = new BasicHttpParams();
+            HttpConnectionParams.setConnectionTimeout(params, 1000);
+            HttpConnectionParams.setSoTimeout(params, 1500);
+            HttpClient httpClient = new DefaultHttpClient(params);
             HttpPost httpPost = new HttpPost(PHP_URL);
             List<NameValuePair> nameValuePairs = new ArrayList<>();
             nameValuePairs.add(new BasicNameValuePair("DeviceID", deviceID));
@@ -61,7 +65,7 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
 
         } catch (Exception e)
         {
-            System.out.println("Error establishing a connection");
+            Log.e("NetworkError1: ","Server unreachable");
         }
 
         try
@@ -79,7 +83,7 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
 
         } catch (Exception e)
         {
-            System.out.println("Error fetching data");
+            Log.e("NetworkError2: ","Server unreachable");
         }
 
         StringBuilder temp1= new StringBuilder();
@@ -121,43 +125,5 @@ public class GetServerUpdates extends AsyncTask<String, Integer, Integer>
     protected void onPostExecute(Integer integer)
     {
         super.onPostExecute(integer);
-    }
-
-    public boolean connectionCheck()
-    {
-        String PHP_URL = "http://192.168.42.67/PHPScripts/connectionCheck.php";
-        InputStream inputStream = null;
-        String line;
-        String result = null;
-        try
-        {
-            HttpClient httpClient = new DefaultHttpClient();
-            HttpGet httpget = new HttpGet(PHP_URL); //Connect with the server
-            org.apache.http.HttpResponse response = httpClient.execute(httpget); //Get the file on the server
-            HttpEntity entity = response.getEntity();
-            inputStream = entity.getContent(); //Get the result of PHP script execution in Android inputstream
-
-        } catch (Exception e)
-        {
-            System.out.println("Error establishing a connection");
-        }
-        try
-        {
-            assert inputStream != null;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "iso-8859-1"), 8);
-            StringBuilder stringBuilder = new StringBuilder();
-            while ((line = reader.readLine()) != null) //Convert InputStream into String
-            {
-                stringBuilder.append(line);
-            }
-            result = stringBuilder.toString();
-            System.out.print(result);
-            inputStream.close();
-
-        } catch (Exception e)
-        {
-            System.out.println("Error fetching data");
-        }
-        return result != null && result.equals("OK");
     }
 }

@@ -24,10 +24,7 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
     @Override
     protected Integer doInBackground(String... strings)
     {
-        if(!connectionCheck()){
-            Log.e("ServerError: ","Server unreachable");
-            return -1;
-        }
+        Log.e("AcousticSampleUpload: ", "Method called");
         int serverResponseCode;
         String lastFile = strings[0];
         String deviceIDLocationBundle = strings[1];
@@ -49,8 +46,8 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
             conn.setDoOutput(true);
             conn.setUseCaches(false);
             conn.setRequestMethod("POST");
-            conn.setConnectTimeout(500);
-            conn.setReadTimeout(500);
+            conn.setConnectTimeout(2000);
+            conn.setReadTimeout(2000);
             conn.setRequestProperty("Connection", "Keep-Alive");
             conn.setRequestProperty("ENCTYPE", "multipart/form-data");
             conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
@@ -106,43 +103,4 @@ public class uploadSampleTask extends AsyncTask<String, Integer, Integer>
     {
         super.onPostExecute(serverResponseCode);
     }
-
-    public boolean connectionCheck()
-    {
-        String PHP_URL = "http://192.168.42.67/PHPScripts/connectionCheck.php";
-        InputStream inputStream = null;
-        String line;
-        String result = null;
-        try
-        {
-            HttpClient httpClient = new DefaultHttpClient();
-            HttpGet httpget = new HttpGet(PHP_URL); //Connect with the server
-            org.apache.http.HttpResponse response = httpClient.execute(httpget); //Get the file on the server
-            HttpEntity entity = response.getEntity();
-            inputStream = entity.getContent(); //Get the result of PHP script execution in Android inputstream
-
-        } catch (Exception e)
-        {
-            System.out.println("Error establishing a connection");
-        }
-        try
-        {
-            assert inputStream != null;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "iso-8859-1"), 8);
-            StringBuilder stringBuilder = new StringBuilder();
-            while ((line = reader.readLine()) != null) //Convert InputStream into String
-            {
-                stringBuilder.append(line);
-            }
-            result = stringBuilder.toString();
-            System.out.print(result);
-            inputStream.close();
-
-        } catch (Exception e)
-        {
-            System.out.println("Error fetching data");
-        }
-        return result != null && result.equals("OK");
-    }
-
 }
