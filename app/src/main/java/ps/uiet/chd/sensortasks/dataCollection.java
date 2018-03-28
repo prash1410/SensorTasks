@@ -1,5 +1,6 @@
 package ps.uiet.chd.sensortasks;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -53,6 +54,7 @@ public class dataCollection extends AppCompatActivity implements View.OnClickLis
         });
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onClick(View v)
     {

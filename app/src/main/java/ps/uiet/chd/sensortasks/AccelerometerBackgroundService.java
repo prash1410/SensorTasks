@@ -465,11 +465,8 @@ public class AccelerometerBackgroundService extends Service
                     String latitude = String.valueOf(locationResult.getLastLocation().getLatitude());
                     String longitude = String.valueOf(locationResult.getLastLocation().getLongitude());
                     lastLocation = latitude + ";" + longitude;
-                    Toast.makeText(getApplicationContext(), lastLocation, Toast.LENGTH_SHORT).show();
                 }
             };
-
-
             fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
 
             final Handler locationUpdatesStopper = new Handler();
