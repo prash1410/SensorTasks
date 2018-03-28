@@ -72,7 +72,8 @@ public class AccelerometerBackgroundService extends Service
     SensorEventListener AccelerometerListener;
 
     @Override
-    public void onCreate() {
+    public void onCreate()
+    {
         super.onCreate();
         createDirectoryIfNotExists();
         deviceID = createDeviceID();
