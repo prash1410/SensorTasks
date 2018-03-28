@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 break;
             case R.id.dataCollectionButton:
-                Intent intent3 = new Intent(getApplicationContext(),WekaActivity.class);
+                Intent intent3 = new Intent(getApplicationContext(),dataCollection.class);
                 startActivity(intent3);
                 break;
             default:

@@ -17,13 +17,45 @@
         android:layout_alignParentBottom="true"/>
 
     <RadioGroup
+        android:id="@+id/activityRG"
+        android:layout_alignParentTop="true"
+        android:background="#fff"
+        android:gravity="center"
+        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <RadioButton
+            android:checked="true"
+            android:layout_marginEnd="10dp"
+            android:id="@+id/walkingRB"
+            android:paddingEnd="20dp"
             android:layout_width="wrap_content"
             android:background="#fff"
             android:text="Walking"
             android:layout_height="wrap_content" />
+        <RadioButton
+            android:layout_marginEnd="10dp"
+            android:id="@+id/neitherRB"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Neither"
+            android:paddingEnd="20dp"
+            android:background="#fff"/>
+        <RadioButton
+            android:id="@+id/drivingRB"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Driving"
+            android:paddingEnd="20dp"
+            android:background="#fff"/>
     </RadioGroup>
+
+    <ImageView
+        android:layout_marginTop="30dp"
+        android:layout_centerHorizontal="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/ic_motorcycle_white_48dp"
+        android:layout_below="@+id/activityRG"/>
 
 </RelativeLayout>
