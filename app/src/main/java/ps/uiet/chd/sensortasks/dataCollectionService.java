@@ -144,8 +144,8 @@ public class dataCollectionService extends Service
                     String[] data = {"" + rawX, "" + rawY, "" + rawZ, "" + x, "" + y, "" + z, ""+total, label};
                     rawDataCSVWriter.writeNext(data);
                 }
-                if (sampleCount == 34) produceFinalResults();
-                if (sampleCount > 35 && (sampleCount - 4) % 10 == 0)
+                if (sampleCount == 63) produceFinalResults();
+                if (sampleCount > 64 && (sampleCount + 1) % 64 == 0)
                 {
                     trimArrayLists();
                     produceFinalResults();
@@ -209,12 +209,14 @@ public class dataCollectionService extends Service
     @SuppressLint("SimpleDateFormat")
     public void produceFinalResults()
     {
+        double variance = calculateVariance();
+        if(variance==0)return;
         try
         {
             File csvFile = new File(rootDirectory + "/Data.csv");
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            String[] data = {"" + calculateVariance(), "" + getZeroCrossings(xMagList), "" + getZeroCrossings(yMagList), "" + getZeroCrossings(zMagList), "" + getPeaks(), label};
+            String[] data = {"" + variance, "" + getZeroCrossings(xMagList), "" + getZeroCrossings(yMagList), "" + getZeroCrossings(zMagList), "" + getPeaks(), label};
             writer.writeNext(data);
             writer.close();
 

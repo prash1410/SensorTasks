@@ -36,15 +36,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Accelerometer = (Button)findViewById(R.id.AccelerometerButton);
+        Accelerometer = findViewById(R.id.AccelerometerButton);
         Accelerometer.setOnClickListener(this);
-        LocationButton = (Button)findViewById(R.id.LocationButton);
+        LocationButton = findViewById(R.id.LocationButton);
         LocationButton.setOnClickListener(this);
-        AccelerometerService = (Button)findViewById(R.id.AccelerometerServiceButton);
+        AccelerometerService = findViewById(R.id.AccelerometerServiceButton);
         AccelerometerService.setOnClickListener(this);
-        wekaButton = (Button)findViewById(R.id.dataCollectionButton);
+        wekaButton = findViewById(R.id.dataCollectionButton);
         wekaButton.setOnClickListener(this);
-        MainActivityLayout = (RelativeLayout)findViewById(R.id.MainActivityLayout);
+        MainActivityLayout = findViewById(R.id.MainActivityLayout);
         ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
         if(ServiceStarted)AccelerometerService.setText("Stop accelerometer\nservice");
         else AccelerometerService.setText("Start accelerometer\nservice");
@@ -185,37 +185,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         return false;
-    }
-
-    public void assetReader()
-    {
-        BufferedReader reader = null;
-        try
-        {
-            reader = new BufferedReader(new InputStreamReader(getAssets().open("vectors.txt")));
-            String line;
-            int linesCount = 0;
-            double[][] vectorsArray = new double[265][100];
-            while( (line = reader.readLine() ) != null)
-            {
-                if(linesCount<265)
-                {
-                    String tempLine[] = line.split(" ");
-                    for(int i=0;i<100;i++)
-                    {
-                        vectorsArray[linesCount][i] = Double.valueOf(tempLine[i]);
-                    }
-                }
-                linesCount++;
-            }
-        } catch (IOException ignored)
-        {
-        } finally
-        {
-            if (reader != null)
-            {try
-                {reader.close();} catch (IOException ignored) {}
-            }
-        }
     }
 }

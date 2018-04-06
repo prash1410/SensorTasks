@@ -1,8 +1,10 @@
 package ps.uiet.chd.sensortasks;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -14,6 +16,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -30,6 +33,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -90,7 +94,7 @@ public class AccelerometerBackgroundService extends Service
     public int onStartCommand(Intent intent, int flags, int startId)
     {
         Toast.makeText(this, "Service started", Toast.LENGTH_SHORT).show();
-        if (!accelerometerActive) activateAccelerometer();
+        if (!accelerometerActive && checkPermissions()) activateAccelerometer();
         handler = new Handler();
         serverTaskHandler = new Handler();
         serverTaskRunnable = new Runnable() {
@@ -225,11 +229,18 @@ public class AccelerometerBackgroundService extends Service
     public void produceFinalResults()
     {
         double variance = calculateVariance();
+        if(variance == 0)
+        {
+            drivingCounter = 0;
+            return;
+        }
+
         int xZeroCrossings = getZeroCrossings(xMagList);
         int yZeroCrossings = getZeroCrossings(yMagList);
         int zZeroCrossings = getZeroCrossings(zMagList);
+        int peaks = getPeaks();
 
-        String result = wekaPredict(variance, xZeroCrossings, yZeroCrossings, zZeroCrossings);
+        String result = wekaPredict(variance, xZeroCrossings, yZeroCrossings, zZeroCrossings, peaks);
         if (result.equals("Driving")) drivingCounter++;
         else drivingCounter = 0;
         SimpleDateFormat simpleDateFormat;
@@ -242,7 +253,7 @@ public class AccelerometerBackgroundService extends Service
             File csvFile = new File(rootDirectory + "/CSVData/Output.csv");
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            String[] data = {"" + variance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings};
+            String[] data = {"" + variance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks};
             writer.writeNext(data);
             writer.close();
 
@@ -315,13 +326,13 @@ public class AccelerometerBackgroundService extends Service
         return zeroCrossings;
     }
 
-    public String wekaPredict(final double var, final double xZeroCross, final double yZeroCross, final double zZeroCross)
+    public String wekaPredict(final double var, final int xZeroCross, final int yZeroCross, final int zZeroCross, final int peaks)
     {
         String result = "Inconclusive";
         if (classifier == null) {
             AssetManager assetManager = getAssets();
             try {
-                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open("Latest.model"));
+                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open("PolyKernel.model"));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -333,6 +344,7 @@ public class AccelerometerBackgroundService extends Service
                 final Attribute attributeXZeroCrossings = new Attribute("xZeroCrossings");
                 final Attribute attributeYZeroCrossings = new Attribute("yZeroCrossings");
                 final Attribute attributeZZeroCrossings = new Attribute("zZeroCrossings");
+                final Attribute attributePeaks = new Attribute("Peaks");
                 final List<String> classes = new ArrayList<String>() {
                     {
                         add("Dummy");
@@ -345,6 +357,7 @@ public class AccelerometerBackgroundService extends Service
                         add(attributeXZeroCrossings);
                         add(attributeYZeroCrossings);
                         add(attributeZZeroCrossings);
+                        add(attributePeaks);
                         Attribute attributeClass = new Attribute("Activity", classes);
                         add(attributeClass);
                     }
@@ -358,14 +371,21 @@ public class AccelerometerBackgroundService extends Service
                         setValue(attributeXZeroCrossings, xZeroCross);
                         setValue(attributeYZeroCrossings, yZeroCross);
                         setValue(attributeZZeroCrossings, zZeroCross);
+                        setValue(attributeZZeroCrossings, peaks);
                     }
                 };
                 newInstance.setDataset(dataUnpredicted);
                 double predictedResult = classifier.classifyInstance(newInstance);
+
+                /*
                 if (predictedResult == 0.0) result = "Walking";
                 if (predictedResult == 1.0) result = "Still";
                 if (predictedResult == 2.0) result = "Driving";
-            } catch (Exception e) {
+                */
+
+                result = "" + predictedResult;
+            } catch (Exception e)
+            {
                 e.printStackTrace();
             }
         }
@@ -375,9 +395,11 @@ public class AccelerometerBackgroundService extends Service
     public void getSoundSample()
     {
         startRecording();
-        handler.postDelayed(new Runnable() {
+        handler.postDelayed(new Runnable()
+        {
             @Override
-            public void run() {
+            public void run()
+            {
                 stopRecording();
                 sendSoundSample();
             }
@@ -484,5 +506,24 @@ public class AccelerometerBackgroundService extends Service
         {
             e.printStackTrace();
         }
+    }
+
+    public int getPeaks()
+    {
+        int peakCounter = 0;
+        double threshold = Collections.max(resultant) * 0.95;
+        for(double element:resultant)if(element>=threshold)peakCounter++;
+        return peakCounter;
+    }
+
+    public boolean checkPermissions()
+    {
+        boolean proceed = true;
+        if(ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)proceed=false;
+        if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)proceed=false;
+        if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)proceed=false;
+        if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED)proceed=false;
+        if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)proceed=false;
+        return proceed;
     }
 }

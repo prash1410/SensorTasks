@@ -31,6 +31,7 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 public class Accelerometer extends AppCompatActivity
 {
+    long tStart, tstop;
     int xZeroCrossings,yZeroCrossings,zZeroCrossings;
     RelativeLayout AccelerometerLayout;
     ArrayList <Double> xMagList = new ArrayList<>();
@@ -43,7 +44,7 @@ public class Accelerometer extends AppCompatActivity
     static String xLinearAcceleration = "";
     static String zLinearAcceleration = "";
     static int count = 0;
-    static int samplingTime = 30;
+    static int samplingTime = 64;
     Boolean Activate = true;
     String output = "",xMeasure = "",yMeasure = "",zMeasure = "";
     Button AccelerometerToggleButton;
@@ -62,9 +63,9 @@ public class Accelerometer extends AppCompatActivity
         setContentView(R.layout.activity_accelerometer);
         StrictMode.ThreadPolicy policy=new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
-        AccelerometerToggleButton = (Button)findViewById(R.id.ToggleAccelerometer);
-        AccelerometerLayout = (RelativeLayout)findViewById(R.id.AccelerometerLayout);
-        AccelerometerValue = (TextView)findViewById(R.id.AccelerometerValue);
+        AccelerometerToggleButton = findViewById(R.id.ToggleAccelerometer);
+        AccelerometerLayout = findViewById(R.id.AccelerometerLayout);
+        AccelerometerValue = findViewById(R.id.AccelerometerValue);
         AccelerometerManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         assert AccelerometerManager != null;
         Accelerometer = AccelerometerManager.getSensorList(Sensor.TYPE_ACCELEROMETER).get(0);
@@ -152,13 +153,14 @@ public class Accelerometer extends AppCompatActivity
                     xLinearAcceleration = "";
                     yLinearAcceleration = "";
                     zLinearAcceleration = "";
+                    tStart = System.currentTimeMillis();
                     AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
                     AccelerometerToggleButton.setText("Deactivate Accelerometer");
                     Activate = false;
                 }
                 else
                 {
-                    AccelerometerValue.setText("Accelerometer Off");
+                    AccelerometerValue.setText("");
                     AccelerometerManager.unregisterListener(AccelerometerListener);
                     AccelerometerToggleButton.setText("Activate Accelerometer");
                     writeToFile(output);
@@ -243,7 +245,9 @@ public class Accelerometer extends AppCompatActivity
             int greaterCounter = 0;
             for(double element:observations) if(element>=cutOff)greaterCounter++;
 
-            AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings+"\n"+greaterCounter);
+            tstop = System.currentTimeMillis();
+            long elapsedTime = tstop-tStart;
+            AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings+"\n"+greaterCounter+"\n"+elapsedTime);
             writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
             writer.flush();
             writer.close();
