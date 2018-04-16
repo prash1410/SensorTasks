@@ -11,6 +11,7 @@ import android.os.StrictMode;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,6 +32,10 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 public class Accelerometer extends AppCompatActivity
 {
+    double[] xMag = new double[64];
+    double[] yMag = new double[64];
+    double[] zMag = new double[64];
+
     long tStart, tstop;
     int xZeroCrossings,yZeroCrossings,zZeroCrossings;
     RelativeLayout AccelerometerLayout;
@@ -113,6 +118,11 @@ public class Accelerometer extends AppCompatActivity
                 xMagList.add(x);
                 yMagList.add(y);
                 zMagList.add(z);
+
+                xMag[count] = x;
+                yMag[count] = y;
+                zMag[count] = z;
+
                 yLinearAcceleration += ""+y+",";
                 xLinearAcceleration += ""+x+",";
                 zLinearAcceleration += ""+z+",";
@@ -251,7 +261,21 @@ public class Accelerometer extends AppCompatActivity
             writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
             writer.flush();
             writer.close();
-            writeToCSV(variance);
+            
+            double[] imag = new double[]{0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0,
+                    0,0,0,0,0,0,0,0};
+
+            writeToCSV();
+            transformRadix2(xMag,imag);
+            transformRadix2(yMag,imag);
+            transformRadix2(zMag,imag);
+
         } catch (IOException e)
         {
             e.printStackTrace();
@@ -297,7 +321,7 @@ public class Accelerometer extends AppCompatActivity
         return choice;
     }
 
-    public void writeToCSV(double variance)
+    public void writeToCSV()
     {
         try
         {
@@ -305,60 +329,17 @@ public class Accelerometer extends AppCompatActivity
             File csvFile = new File(baseDir, "/Alarms/Output.csv");
             FileWriter fileWriter = new FileWriter(csvFile,true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            String[] data = {""+variance, ""+xZeroCrossings,""+yZeroCrossings,""+zZeroCrossings};
 
-            String result = "Inconclusive";
-            int predictionResult = SVC.main((""+variance+","+xZeroCrossings+","+yZeroCrossings+","+zZeroCrossings).split(","),assetReader());
-            if(predictionResult==0)result = "Driving";
-            if(predictionResult==2)result = "Walking";
-            if(predictionResult==1)result = "Still";
-            Snackbar snackbar = Snackbar
-                    .make(AccelerometerLayout, result, Snackbar.LENGTH_LONG)
-                    .setAction("OK", new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {}
-                    });
+            for(int i=0;i<xMagList.size();i++)
+            {
+                String[] data = {""+xMagList.get(i), ""+yMagList.get(i),""+zMagList.get(i)};
+                writer.writeNext(data);
+            }
 
-            snackbar.show();
-
-            writer.writeNext(data);
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public double[][] assetReader()
-    {
-        double[][] vectorsArray = new double[80][4];
-        BufferedReader reader = null;
-        try
-        {
-            reader = new BufferedReader(new InputStreamReader(getAssets().open("vectors.txt")));
-            String line;
-            int linesCount = 0;
-            while( (line = reader.readLine() ) != null)
-            {
-                if(linesCount<80)
-                {
-                    String tempLine[] = line.split(" ");
-                    for(int i=0;i<4;i++)
-                    {
-                        vectorsArray[linesCount][i] = Double.valueOf(tempLine[i]);
-                    }
-                }
-                linesCount++;
-            }
-        } catch (IOException ignored)
-        {
-        } finally
-        {
-            if (reader != null)
-            {try
-            {reader.close();} catch (IOException ignored) {}
-            }
-        }
-        return vectorsArray;
     }
 
     public int getZeroCrossings(ArrayList<Double> magList)
@@ -379,4 +360,79 @@ public class Accelerometer extends AppCompatActivity
         }
         return zeroCrossings;
     }
+
+
+    public static void transformRadix2(double[] real, double[] imag)
+    {
+        int n = real.length;
+        if (n != imag.length)
+            throw new IllegalArgumentException("Mismatched lengths");
+        int levels = 31 - Integer.numberOfLeadingZeros(n);
+        if (1 << levels != n)
+            throw new IllegalArgumentException("Length is not a power of 2");
+
+        double[] cosTable = new double[n / 2];
+        double[] sinTable = new double[n / 2];
+        for (int i = 0; i < n / 2; i++) {
+            cosTable[i] = Math.cos(2 * Math.PI * i / n);
+            sinTable[i] = Math.sin(2 * Math.PI * i / n);
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            int j = Integer.reverse(i) >>> (32 - levels);
+            if (j > i) {
+                double temp = real[i];
+                real[i] = real[j];
+                real[j] = temp;
+                temp = imag[i];
+                imag[i] = imag[j];
+                imag[j] = temp;
+            }
+        }
+
+        for (int size = 2; size <= n; size *= 2)
+        {
+            int halfsize = size / 2;
+            int tablestep = n / size;
+            for (int i = 0; i < n; i += size)
+            {
+                for (int j = i, k = 0; j < i + halfsize; j++, k += tablestep)
+                {
+                    int l = j + halfsize;
+                    double tpre =  real[l] * cosTable[k] + imag[l] * sinTable[k];
+                    double tpim = -real[l] * sinTable[k] + imag[l] * cosTable[k];
+                    real[l] = real[j] - tpre;
+                    imag[l] = imag[j] - tpim;
+                    real[j] += tpre;
+                    imag[j] += tpim;
+                }
+            }
+            if (size == n)
+                break;
+        }
+
+        try
+        {
+            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
+            File csvFile = new File(baseDir, "/Alarms/OutputFFT.csv");
+            FileWriter fileWriter = new FileWriter(csvFile,true);
+            CSVWriter writer = new CSVWriter(fileWriter);
+
+            for(int i=0;i<real.length;i++)
+            {
+                double realSqTemp = real[i]*real[i];
+                double imagSqTemp = imag[i]*imag[i];
+                double tempSum = realSqTemp + imagSqTemp;
+                tempSum = Math.sqrt(tempSum);
+                String[] data = {""+real[i], ""+imag[i], ""+tempSum};
+                writer.writeNext(data);
+            }
+
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
