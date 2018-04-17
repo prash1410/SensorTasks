@@ -18,6 +18,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -261,7 +263,7 @@ public class Accelerometer extends AppCompatActivity
             writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
             writer.flush();
             writer.close();
-            
+
             double[] imag = new double[]{0,0,0,0,0,0,0,0,
                     0,0,0,0,0,0,0,0,
                     0,0,0,0,0,0,0,0,
@@ -362,7 +364,7 @@ public class Accelerometer extends AppCompatActivity
     }
 
 
-    public static void transformRadix2(double[] real, double[] imag)
+    public void transformRadix2(double[] real, double[] imag)
     {
         int n = real.length;
         if (n != imag.length)
@@ -419,20 +421,63 @@ public class Accelerometer extends AppCompatActivity
             FileWriter fileWriter = new FileWriter(csvFile,true);
             CSVWriter writer = new CSVWriter(fileWriter);
 
-            for(int i=0;i<real.length;i++)
+            String[] header = {"Real", "Imaginary"};
+            writer.writeNext(header);
+
+            ArrayList<Double> magList = new ArrayList<>(), psdList = new ArrayList<>(), normPSDList = new ArrayList<>();
+            double psdSum = 0;
+
+            for(int i=1;i<31;i++)
             {
                 double realSqTemp = real[i]*real[i];
                 double imagSqTemp = imag[i]*imag[i];
-                double tempSum = realSqTemp + imagSqTemp;
-                tempSum = Math.sqrt(tempSum);
-                String[] data = {""+real[i], ""+imag[i], ""+tempSum};
+                double tempSum = Math.round((realSqTemp + imagSqTemp)*1000d)/1000d;
+                double magnitude = Math.round((Math.sqrt(tempSum))*1000d)/1000d;
+                magList.add(magnitude);
+                psdList.add(tempSum);
+                psdSum = psdSum + tempSum;
+                real[i] = Math.round(real[i]*1000d)/1000d;
+                imag[i] = Math.round(imag[i]*1000d)/1000d;
+                String[] data = {""+real[i], ""+imag[i]};
                 writer.writeNext(data);
             }
 
+            for (int i=0; i<psdList.size(); i++)
+            {
+                double tempNormPSD = Math.round((psdList.get(i)/psdSum)*1000d)/1000d;
+                normPSDList.add(tempNormPSD);
+            }
             writer.close();
+            calculateEnergy(normPSDList);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void calculateEntropy(ArrayList<Double> normPSDList)
+    {
+        double entropySum = 0;
+
+        for(double temp:normPSDList)
+        {
+            double entropyTemp = temp*(Math.log(temp)/Math.log(2));
+            entropySum = entropySum + entropyTemp;
+        }
+        entropySum = 0 - entropySum;
+        Toast.makeText(getApplicationContext(), ""+entropySum, Toast.LENGTH_LONG).show();
+    }
+
+    public void calculateEnergy(ArrayList<Double> psdList)
+    {
+        double energy = 0;
+        for(double temp:psdList)
+        {
+            energy = energy + temp;
+        }
+
+        energy = energy/psdList.size();
+
+        Toast.makeText(getApplicationContext(), ""+energy, Toast.LENGTH_LONG).show();
     }
 
 }
