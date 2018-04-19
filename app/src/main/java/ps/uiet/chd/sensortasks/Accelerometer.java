@@ -44,9 +44,10 @@ public class Accelerometer extends AppCompatActivity
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
-    double xAngleGravity = 0,yAngleGravity = 0,zAngleGravity = 0;
+    double xAngleGravity = 0, yAngleGravity = 0,zAngleGravity = 0;
     double gravity[] = new double[3];
     static double initX,initY,initZ;
+    static double termX,termY,termZ;
     static String yLinearAcceleration = "";
     static String xLinearAcceleration = "";
     static String zLinearAcceleration = "";
@@ -259,7 +260,7 @@ public class Accelerometer extends AppCompatActivity
 
             tstop = System.currentTimeMillis();
             long elapsedTime = tstop-tStart;
-            AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings+"\n"+greaterCounter+"\n"+elapsedTime);
+            //AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings+"\n"+greaterCounter+"\n"+elapsedTime);
             writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
             writer.flush();
             writer.close();
@@ -274,9 +275,11 @@ public class Accelerometer extends AppCompatActivity
                     0,0,0,0,0,0,0,0};
 
             writeToCSV();
-            transformRadix2(xMag,imag);
-            transformRadix2(yMag,imag);
-            transformRadix2(zMag,imag);
+            double energyX = transformRadix2(xMag,imag);
+            double energyY = transformRadix2(yMag,imag);
+            double energyZ = transformRadix2(zMag,imag);
+
+            AccelerometerValue.setText("Variance: "+variance+"\n"+greaterCounter+"\n"+elapsedTime+"\n"+xAngleGravity+"\n"+yAngleGravity+"\n"+zAngleGravity);
 
         } catch (IOException e)
         {
@@ -294,6 +297,7 @@ public class Accelerometer extends AppCompatActivity
         yAngleGravity = Math.round(((Math.acos(tempInitY/9.8)*180.0d)/Math.PI)*100d)/100d;
         zAngleGravity = Math.round(((Math.acos(tempInitZ/9.8)*180.0d)/Math.PI)*100d)/100d;
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
@@ -364,7 +368,7 @@ public class Accelerometer extends AppCompatActivity
     }
 
 
-    public void transformRadix2(double[] real, double[] imag)
+    public double transformRadix2(double[] real, double[] imag)
     {
         int n = real.length;
         if (n != imag.length)
@@ -414,6 +418,8 @@ public class Accelerometer extends AppCompatActivity
                 break;
         }
 
+        double energy = 0;
+
         try
         {
             File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
@@ -427,7 +433,7 @@ public class Accelerometer extends AppCompatActivity
             ArrayList<Double> magList = new ArrayList<>(), psdList = new ArrayList<>(), normPSDList = new ArrayList<>();
             double psdSum = 0;
 
-            for(int i=1;i<31;i++)
+            for(int i=1;i<32;i++)
             {
                 double realSqTemp = real[i]*real[i];
                 double imagSqTemp = imag[i]*imag[i];
@@ -448,13 +454,16 @@ public class Accelerometer extends AppCompatActivity
                 normPSDList.add(tempNormPSD);
             }
             writer.close();
-            calculateEnergy(normPSDList);
-        } catch (IOException e) {
+            energy = calculateEntropy(psdList);
+            //energy = magList.get(0);
+        } catch (IOException e)
+        {
             e.printStackTrace();
         }
+        return energy;
     }
 
-    public void calculateEntropy(ArrayList<Double> normPSDList)
+    public double calculateEntropy(ArrayList<Double> normPSDList)
     {
         double entropySum = 0;
 
@@ -463,21 +472,17 @@ public class Accelerometer extends AppCompatActivity
             double entropyTemp = temp*(Math.log(temp)/Math.log(2));
             entropySum = entropySum + entropyTemp;
         }
-        entropySum = 0 - entropySum;
-        Toast.makeText(getApplicationContext(), ""+entropySum, Toast.LENGTH_LONG).show();
+        return 0 - entropySum;
     }
 
-    public void calculateEnergy(ArrayList<Double> psdList)
+    public double calculateEnergy(ArrayList<Double> psdList)
     {
         double energy = 0;
         for(double temp:psdList)
         {
             energy = energy + temp;
         }
-
-        energy = energy/psdList.size();
-
-        Toast.makeText(getApplicationContext(), ""+energy, Toast.LENGTH_LONG).show();
+        return energy/psdList.size();
     }
 
 }
