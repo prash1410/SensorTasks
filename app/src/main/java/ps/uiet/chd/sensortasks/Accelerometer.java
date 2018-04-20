@@ -47,7 +47,6 @@ public class Accelerometer extends AppCompatActivity
     double xAngleGravity = 0, yAngleGravity = 0,zAngleGravity = 0;
     double gravity[] = new double[3];
     static double initX,initY,initZ;
-    static double termX,termY,termZ;
     static String yLinearAcceleration = "";
     static String xLinearAcceleration = "";
     static String zLinearAcceleration = "";
@@ -279,7 +278,7 @@ public class Accelerometer extends AppCompatActivity
             double energyY = transformRadix2(yMag,imag);
             double energyZ = transformRadix2(zMag,imag);
 
-            AccelerometerValue.setText("Variance: "+variance+"\n"+greaterCounter+"\n"+elapsedTime+"\n"+xAngleGravity+"\n"+yAngleGravity+"\n"+zAngleGravity);
+            AccelerometerValue.setText("Variance: "+variance+"\n"+greaterCounter+"\n"+elapsedTime);
 
         } catch (IOException e)
         {

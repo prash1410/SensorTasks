@@ -31,13 +31,27 @@ public class dataCollectionService extends Service
     FileWriter rawDataFileWriter;
     CSVWriter rawDataCSVWriter;
 
+    ArrayList<Double> xRawMagList = new ArrayList<>();
+    ArrayList<Double> yRawMagList = new ArrayList<>();
+    ArrayList<Double> zRawMagList = new ArrayList<>();
+
     ArrayList<Double> xMagList = new ArrayList<>();
     ArrayList<Double> yMagList = new ArrayList<>();
     ArrayList<Double> zMagList = new ArrayList<>();
+
+    ArrayList<Double> xRawMagListFiltered = new ArrayList<>();
+    ArrayList<Double> yRawMagListFiltered = new ArrayList<>();
+    ArrayList<Double> zRawMagListFiltered = new ArrayList<>();
+
+    ArrayList<Double> xMagListFiltered = new ArrayList<>();
+    ArrayList<Double> yMagListFiltered = new ArrayList<>();
+    ArrayList<Double> zMagListFiltered = new ArrayList<>();
+
     ArrayList<Double> resultant = new ArrayList<>();
+
     double xAngleGravity, yAngleGravity, zAngleGravity;
     double gravity[] = new double[3];
-    double initX, initY, initZ;
+
     static int sampleCount;
     boolean accelerometerActive = false;
 
@@ -94,9 +108,8 @@ public class dataCollectionService extends Service
             String[] data = {"rawX", "rawY", "rawZ", "noGravityX", "noGravityY", "noGravityZ", "resultant", "label"};
             rawDataCSVWriter.writeNext(data);
 
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+        catch (IOException e) { e.printStackTrace(); }
 
         AccelerometerManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         assert AccelerometerManager != null;
@@ -108,44 +121,42 @@ public class dataCollectionService extends Service
             {
                 final float alpha = 0.8f;
                 double x = event.values[0];
-                double rawX = Math.round(x * 100d) / 100d;
+                double rawX = x;
                 double y = event.values[1];
-                double rawY = Math.round(y * 100d) / 100d;
+                double rawY = y;
                 double z = event.values[2];
-                double rawZ = Math.round(z * 100d) / 100d;
-                double total = Math.round((Math.sqrt(x * x + y * y + z * z)) * 100d) / 100d;
+                double rawZ = z;
+                //double total = Math.round((Math.sqrt(x * x + y * y + z * z)) * 100d) / 100d;
 
                 gravity[0] = alpha * gravity[0] + (1 - alpha) * x;
                 gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
                 gravity[2] = alpha * gravity[2] + (1 - alpha) * z;
 
-                if (sampleCount == 0) {
-                    initX = Math.round(x * 100d) / 100d;
-                    initY = Math.round(y * 100d) / 100d;
-                    initZ = Math.round(z * 100d) / 100d;
-                    findMotionDirection();
-                }
+                if (sampleCount == 0) findMotionDirection(x, y, z);
 
-                x = Math.round((event.values[0] - gravity[0]) * 100d) / 100d;
-                y = Math.round((event.values[1] - gravity[1]) * 100d) / 100d;
-                z = Math.round((event.values[2] - gravity[2]) * 100d) / 100d;
+                x = rawX - gravity[0];
+                y = rawY - gravity[1];
+                z = rawZ - gravity[2];
 
-                x = Math.round((x * Math.sin(Math.toRadians(xAngleGravity))) * 100d) / 100d;
-                y = Math.round((y * Math.sin(Math.toRadians(yAngleGravity))) * 100d) / 100d;
-                z = Math.round((z * Math.sin(Math.toRadians(zAngleGravity))) * 100d) / 100d;
+                x = x * Math.sin(Math.toRadians(xAngleGravity));
+                y = y * Math.sin(Math.toRadians(yAngleGravity));
+                z = z * Math.sin(Math.toRadians(zAngleGravity));
 
                 if (sampleCount >= 5)
                 {
                     xMagList.add(x);
                     yMagList.add(y);
                     zMagList.add(z);
-                    resultant.add(total);
 
-                    String[] data = {"" + rawX, "" + rawY, "" + rawZ, "" + x, "" + y, "" + z, ""+total, label};
-                    rawDataCSVWriter.writeNext(data);
+                    xRawMagList.add(rawX);
+                    yRawMagList.add(rawY);
+                    zRawMagList.add(rawZ);
+
+                    //String[] data = {"" + rawX, "" + rawY, "" + rawZ, "" + x, "" + y, "" + z, ""+total, label};
+                    //rawDataCSVWriter.writeNext(data);
                 }
-                if (sampleCount == 63) produceFinalResults();
-                if (sampleCount > 64 && (sampleCount + 1) % 64 == 0)
+                if (sampleCount == 68) produceFinalResults();
+                if (sampleCount > 69 && (sampleCount + 1) % 32 == 0)
                 {
                     trimArrayLists();
                     produceFinalResults();
@@ -169,9 +180,8 @@ public class dataCollectionService extends Service
         resultant.clear();
     }
 
-    public void findMotionDirection()
+    public void findMotionDirection(double tempInitX, double tempInitY, double tempInitZ)
     {
-        double tempInitX = initX, tempInitY = initY, tempInitZ = initZ;
         if (tempInitX < 0) tempInitX = 0 - tempInitX;
         if (tempInitY < 0) tempInitY = 0 - tempInitY;
         if (tempInitZ < 0) tempInitZ = 0 - tempInitZ;
@@ -261,7 +271,8 @@ public class dataCollectionService extends Service
 
     public void trimArrayLists()
     {
-        for (int i = 10; i < xMagList.size(); i++) {
+        for (int i = 10; i < xMagList.size(); i++)
+        {
             xMagList.set(i - 10, xMagList.get(i));
             yMagList.set(i - 10, yMagList.get(i));
             zMagList.set(i - 10, zMagList.get(i));
@@ -270,10 +281,10 @@ public class dataCollectionService extends Service
 
         for (int i = 0; i < 10; i++)
         {
-            xMagList.remove(30);
-            yMagList.remove(30);
-            zMagList.remove(30);
-            resultant.remove(30);
+            xMagList.remove(64);
+            yMagList.remove(64);
+            zMagList.remove(64);
+            resultant.remove(64);
         }
     }
 
@@ -283,5 +294,10 @@ public class dataCollectionService extends Service
         double threshold = Collections.max(resultant) * 0.95;
         for(double element:resultant)if(element>=threshold)peakCounter++;
         return peakCounter;
+    }
+
+    public void filterData()
+    {
+
     }
 }
