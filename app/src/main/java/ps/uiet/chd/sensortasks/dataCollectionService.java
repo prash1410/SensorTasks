@@ -135,7 +135,6 @@ public class dataCollectionService extends Service
                 double rawY = y;
                 double z = event.values[2];
                 double rawZ = z;
-                //double total = Math.round((Math.sqrt(x * x + y * y + z * z)) * 100d) / 100d;
 
                 gravity[0] = alpha * gravity[0] + (1 - alpha) * x;
                 gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
@@ -155,25 +154,14 @@ public class dataCollectionService extends Service
                 {
                     xMagList.add(Math.round(x * 100d) / 100d);
                     yMagList.add(Math.round(y * 100d) / 100d);
-                    zMagList.add(Math.round(x * 100d) / 100d);
+                    zMagList.add(Math.round(z * 100d) / 100d);
 
                     xRawMagList.add(Math.round(rawX * 100d) / 100d);
                     yRawMagList.add(Math.round(rawY * 100d) / 100d);
                     zRawMagList.add(Math.round(rawZ * 100d) / 100d);
-
-                    //String[] data = {"" + rawX, "" + rawY, "" + rawZ, "" + x, "" + y, "" + z, ""+total, label};
-                    //rawDataCSVWriter.writeNext(data);
                 }
-                if (sampleCount == 68)
-                {
-                    Log.e("DataCollection: ",""+xMagList.size());
-                    filterData();
-                }
-                if (sampleCount > 69 && (sampleCount - 4) % 32 == 0)
-                {
-                    Log.e("DataCollection: ",""+xMagList.size());
-                    trimArrayLists();
-                }
+                if (sampleCount == 68) filterData();
+                if (sampleCount > 69 && (sampleCount - 4) % 32 == 0) trimArrayLists();
                 sampleCount++;
             }
 
@@ -238,15 +226,14 @@ public class dataCollectionService extends Service
             String[] data = {""+xRawMagList.get(i), ""+yRawMagList.get(i), ""+zRawMagList.get(i), ""+xMagList.get(i), ""+yMagList.get(i), ""+zMagList.get(i), ""+xRawMagListFiltered.get(i), ""+yRawMagListFiltered.get(i), ""+zRawMagListFiltered.get(i), ""+xMagListFiltered.get(i), ""+yMagListFiltered.get(i), ""+zMagListFiltered.get(i), ""+resultant.get(i), ""+resultantFiltered.get(i), label};
             rawDataCSVWriter.writeNext(data);
         }
-        /*
-        double variance = calculateVariance();
-        if(variance==0)return;
+
+        if(varianceFiltered == 0 || variance == 0)return;
         try
         {
             File csvFile = new File(rootDirectory + "/Data.csv");
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            String[] data = {"" + variance, "" + getZeroCrossings(xMagList), "" + getZeroCrossings(yMagList), "" + getZeroCrossings(zMagList), "" + getPeaks(), label};
+            String[] data = {"" + mean, "" + meanFiltered, "" + variance, "" + varianceFiltered, "" + xVariance, "" + yVariance, "" + zVariance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks, "" + peaksFiltered, "" + xDCComponent, "" + yDCComponent, "" + zDCComponent, "" + xSpectralEnergy, "" + ySpectralEnergy, "" + zSpectralEnergy, "" + xEntropy, "" + yEntropy, "" + zEntropy, label};
             writer.writeNext(data);
             writer.close();
 
@@ -254,7 +241,7 @@ public class dataCollectionService extends Service
         {
             e.printStackTrace();
         }
-        */
+
     }
 
     public int getZeroCrossings(ArrayList<Double> magList)
@@ -274,7 +261,7 @@ public class dataCollectionService extends Service
         return zeroCrossings;
     }
 
-    public double calculateVariance(ArrayList<Double>  dataList)
+    public double calculateVariance(ArrayList<Double> dataList)
     {
         int count = dataList.size();
         double sum = 0;
@@ -407,10 +394,10 @@ public class dataCollectionService extends Service
             x = xRawMagListFiltered.get(i);
             y = yRawMagListFiltered.get(i);
             z = zRawMagListFiltered.get(i);
-
             resultantFiltered.add(Math.round((Math.sqrt(x*x + y*y + z*z)) * 1000d) / 1000d);
         }
         getTimeDomainFeatures();
+        getFrequencyDomainFeatures();
         produceFinalResults();
     }
 
@@ -448,10 +435,30 @@ public class dataCollectionService extends Service
         double[] realZ = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
         double[] imag = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
 
-        for(int i = 0; )
+        for(int i = 0; i < xMagList.size(); i++)
+        {
+            realX[i] = xMagList.get(i);
+            realY[i] = yMagList.get(i);
+            realZ[i] = zMagList.get(i);
+        }
+        String xFeatures[] = performFFT(realX,imag).split(";");
+        String yFeatures[] = performFFT(realY,imag).split(";");
+        String zFeatures[] = performFFT(realZ,imag).split(";");
+
+        xDCComponent = Double.valueOf(xFeatures[0]);
+        yDCComponent = Double.valueOf(yFeatures[0]);
+        zDCComponent = Double.valueOf(zFeatures[0]);
+
+        xSpectralEnergy = Double.valueOf(xFeatures[1]);
+        ySpectralEnergy = Double.valueOf(yFeatures[1]);
+        zSpectralEnergy = Double.valueOf(zFeatures[1]);
+
+        xEntropy = Double.valueOf(xFeatures[2]);
+        yEntropy = Double.valueOf(yFeatures[2]);
+        zEntropy = Double.valueOf(zFeatures[2]);
     }
 
-    public void performFFT(double[] real, double[] imag)
+    public String performFFT(double[] real, double[] imag)
     {
         int n = real.length;
         if (n != imag.length)
@@ -500,5 +507,34 @@ public class dataCollectionService extends Service
             if (size == n)
                 break;
         }
+
+        ArrayList<Double> psdList = new ArrayList<>();
+        double psdSum = 0, dcComponent = 0;
+        for(int i=0;i<32;i++)
+        {
+            double realSqTemp = real[i]*real[i];
+            double imagSqTemp = imag[i]*imag[i];
+            double tempSum = Math.round((realSqTemp + imagSqTemp)*1000d)/1000d;
+            if(i==0)dcComponent = Math.sqrt(tempSum);
+            else
+            {
+                psdList.add(tempSum);
+                psdSum = psdSum + tempSum;
+            }
+        }
+        double psd = psdSum/psdList.size();
+        double entropy = calculateEntropy(psdList);
+        return ""+dcComponent+";"+psd+";"+entropy;
+    }
+
+    public double calculateEntropy(ArrayList<Double> psdList)
+    {
+        double entropySum = 0;
+        for(double temp:psdList)
+        {
+            double entropyTemp = temp*(Math.log(temp)/Math.log(2));
+            entropySum = entropySum + entropyTemp;
+        }
+        return 0 - entropySum;
     }
 }
