@@ -10,6 +10,7 @@ import android.hardware.SensorManager;
 import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.widget.Toast;
 
 import java.io.File;
@@ -47,7 +48,15 @@ public class dataCollectionService extends Service
     ArrayList<Double> yMagListFiltered = new ArrayList<>();
     ArrayList<Double> zMagListFiltered = new ArrayList<>();
 
+    ArrayList<Double> resultantFiltered = new ArrayList<>();
     ArrayList<Double> resultant = new ArrayList<>();
+
+    double variance, varianceFiltered, xVariance, yVariance, zVariance;
+    double mean, meanFiltered;
+    int peaks, peaksFiltered, xZeroCrossings, yZeroCrossings, zZeroCrossings;
+    double xDCComponent, yDCComponent, zDCComponent;
+    double xSpectralEnergy, ySpectralEnergy, zSpectralEnergy;
+    double xEntropy, yEntropy, zEntropy;
 
     double xAngleGravity, yAngleGravity, zAngleGravity;
     double gravity[] = new double[3];
@@ -105,7 +114,7 @@ public class dataCollectionService extends Service
             rawDataFile = new File(rootDirectory + "/RawData_"+time+".csv");
             rawDataFileWriter = new FileWriter(rawDataFile, true);
             rawDataCSVWriter = new CSVWriter(rawDataFileWriter);
-            String[] data = {"rawX", "rawY", "rawZ", "noGravityX", "noGravityY", "noGravityZ", "resultant", "label"};
+            String[] data = {"rawX", "rawY", "rawZ", "noGravityX", "noGravityY", "noGravityZ", "filteredX", "filteredY", "filteredZ", "filteredNoGravityX", "filteredNoGravityY", "filteredNoGravityZ", "resultant", "resultantFiltered", "label"};
             rawDataCSVWriter.writeNext(data);
 
         }
@@ -144,22 +153,26 @@ public class dataCollectionService extends Service
 
                 if (sampleCount >= 5)
                 {
-                    xMagList.add(x);
-                    yMagList.add(y);
-                    zMagList.add(z);
+                    xMagList.add(Math.round(x * 100d) / 100d);
+                    yMagList.add(Math.round(y * 100d) / 100d);
+                    zMagList.add(Math.round(x * 100d) / 100d);
 
-                    xRawMagList.add(rawX);
-                    yRawMagList.add(rawY);
-                    zRawMagList.add(rawZ);
+                    xRawMagList.add(Math.round(rawX * 100d) / 100d);
+                    yRawMagList.add(Math.round(rawY * 100d) / 100d);
+                    zRawMagList.add(Math.round(rawZ * 100d) / 100d);
 
                     //String[] data = {"" + rawX, "" + rawY, "" + rawZ, "" + x, "" + y, "" + z, ""+total, label};
                     //rawDataCSVWriter.writeNext(data);
                 }
-                if (sampleCount == 68) produceFinalResults();
-                if (sampleCount > 69 && (sampleCount + 1) % 32 == 0)
+                if (sampleCount == 68)
                 {
+                    Log.e("DataCollection: ",""+xMagList.size());
+                    filterData();
+                }
+                if (sampleCount > 69 && (sampleCount - 4) % 32 == 0)
+                {
+                    Log.e("DataCollection: ",""+xMagList.size());
                     trimArrayLists();
-                    produceFinalResults();
                 }
                 sampleCount++;
             }
@@ -219,6 +232,13 @@ public class dataCollectionService extends Service
     @SuppressLint("SimpleDateFormat")
     public void produceFinalResults()
     {
+
+        for(int i = 0;i < xMagList.size(); i++)
+        {
+            String[] data = {""+xRawMagList.get(i), ""+yRawMagList.get(i), ""+zRawMagList.get(i), ""+xMagList.get(i), ""+yMagList.get(i), ""+zMagList.get(i), ""+xRawMagListFiltered.get(i), ""+yRawMagListFiltered.get(i), ""+zRawMagListFiltered.get(i), ""+xMagListFiltered.get(i), ""+yMagListFiltered.get(i), ""+zMagListFiltered.get(i), ""+resultant.get(i), ""+resultantFiltered.get(i), label};
+            rawDataCSVWriter.writeNext(data);
+        }
+        /*
         double variance = calculateVariance();
         if(variance==0)return;
         try
@@ -234,6 +254,7 @@ public class dataCollectionService extends Service
         {
             e.printStackTrace();
         }
+        */
     }
 
     public int getZeroCrossings(ArrayList<Double> magList)
@@ -253,51 +274,231 @@ public class dataCollectionService extends Service
         return zeroCrossings;
     }
 
-    public double calculateVariance()
+    public double calculateVariance(ArrayList<Double>  dataList)
     {
-        int count = resultant.size();
+        int count = dataList.size();
         double sum = 0;
-        for(double tempElement:resultant)sum = sum+tempElement;
+        for(double tempElement:dataList)sum = sum+tempElement;
         double average = sum / count;
         double squareSum = 0;
-        for (double tempElement : resultant)
+        for (double tempElement : dataList)
         {
             double temp = tempElement - average;
             temp = temp * temp;
             squareSum = squareSum + temp;
         }
-        return Math.round((squareSum / count) * 100d) / 100d;
+        return Math.round((squareSum / count) * 1000d) / 1000d;
     }
 
     public void trimArrayLists()
     {
-        for (int i = 10; i < xMagList.size(); i++)
+        for (int i = 32; i < xMagList.size(); i++)
         {
-            xMagList.set(i - 10, xMagList.get(i));
-            yMagList.set(i - 10, yMagList.get(i));
-            zMagList.set(i - 10, zMagList.get(i));
-            resultant.set(i - 10, resultant.get(i));
+            xMagList.set(i - 32, xMagList.get(i));
+            yMagList.set(i - 32, yMagList.get(i));
+            zMagList.set(i - 32, zMagList.get(i));
+
+            xRawMagList.set(i - 32, xRawMagList.get(i));
+            yRawMagList.set(i - 32, yRawMagList.get(i));
+            zRawMagList.set(i - 32, zRawMagList.get(i));
         }
 
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 32; i++)
         {
             xMagList.remove(64);
             yMagList.remove(64);
             zMagList.remove(64);
-            resultant.remove(64);
+
+            xRawMagList.remove(64);
+            yRawMagList.remove(64);
+            zRawMagList.remove(64);
         }
+        Log.e("DataCollection: ",""+xMagList.size());
+        filterData();
     }
 
-    public int getPeaks()
+    public int getPeaks(ArrayList<Double> dataList)
     {
         int peakCounter = 0;
-        double threshold = Collections.max(resultant) * 0.95;
-        for(double element:resultant)if(element>=threshold)peakCounter++;
+        double threshold = Collections.max(dataList) * 0.95;
+        for(double element:dataList)if(element>=threshold)peakCounter++;
         return peakCounter;
     }
 
     public void filterData()
     {
+        xMagListFiltered.clear();
+        yMagListFiltered.clear();
+        zMagListFiltered.clear();
 
+        xRawMagListFiltered.clear();
+        yRawMagListFiltered.clear();
+        zRawMagListFiltered.clear();
+
+        xMagListFiltered.add(xMagList.get(0));
+        yMagListFiltered.add(yMagList.get(0));
+        zMagListFiltered.add(zMagList.get(0));
+
+        xRawMagListFiltered.add(xRawMagList.get(0));
+        yRawMagListFiltered.add(yRawMagList.get(0));
+        zRawMagListFiltered.add(zRawMagList.get(0));
+
+        for(int i = 1;i < xMagList.size() - 1;i++)
+        {
+            ArrayList<Double> tempX = new ArrayList<>();
+            ArrayList<Double> tempY = new ArrayList<>();
+            ArrayList<Double> tempZ = new ArrayList<>();
+
+            ArrayList<Double> tempRawX = new ArrayList<>();
+            ArrayList<Double> tempRawY = new ArrayList<>();
+            ArrayList<Double> tempRawZ = new ArrayList<>();
+
+            for(int j = -1;j < 2;j++)
+            {
+                tempX.add(xMagList.get(i + j));
+                tempY.add(yMagList.get(i + j));
+                tempZ.add(zMagList.get(i + j));
+
+                tempRawX.add(xRawMagList.get(i + j));
+                tempRawY.add(yRawMagList.get(i + j));
+                tempRawZ.add(zRawMagList.get(i + j));
+            }
+
+            Collections.sort(tempX);
+            Collections.sort(tempY);
+            Collections.sort(tempZ);
+            Collections.sort(tempRawX);
+            Collections.sort(tempRawY);
+            Collections.sort(tempRawZ);
+
+            xMagListFiltered.add(tempX.get(1));
+            yMagListFiltered.add(tempY.get(1));
+            zMagListFiltered.add(tempZ.get(1));
+
+            xRawMagListFiltered.add(tempRawX.get(1));
+            yRawMagListFiltered.add(tempRawY.get(1));
+            zRawMagListFiltered.add(tempRawZ.get(1));
+        }
+
+        xMagListFiltered.add(xMagList.get(63));
+        yMagListFiltered.add(yMagList.get(63));
+        zMagListFiltered.add(zMagList.get(63));
+
+        xRawMagListFiltered.add(xRawMagList.get(63));
+        yRawMagListFiltered.add(yRawMagList.get(63));
+        zRawMagListFiltered.add(zRawMagList.get(63));
+
+        computeResultant();
+    }
+
+    public void computeResultant()
+    {
+        resultant.clear();
+        resultantFiltered.clear();
+
+        double x,y,z;
+        for(int i = 0;i < xRawMagList.size();i++)
+        {
+            x = xRawMagList.get(i);
+            y = yRawMagList.get(i);
+            z = zRawMagList.get(i);
+            resultant.add(Math.round((Math.sqrt(x*x + y*y + z*z)) * 1000d) / 1000d);
+
+            x = xRawMagListFiltered.get(i);
+            y = yRawMagListFiltered.get(i);
+            z = zRawMagListFiltered.get(i);
+
+            resultantFiltered.add(Math.round((Math.sqrt(x*x + y*y + z*z)) * 1000d) / 1000d);
+        }
+        getTimeDomainFeatures();
+        produceFinalResults();
+    }
+
+    public void getTimeDomainFeatures()
+    {
+        mean = calculateMean(resultant);
+        meanFiltered = calculateMean(resultantFiltered);
+
+        variance = calculateVariance(resultant);
+        varianceFiltered = calculateVariance(resultantFiltered);
+        xVariance = calculateVariance(xMagListFiltered);
+        yVariance = calculateVariance(yMagListFiltered);
+        zVariance = calculateVariance(zMagListFiltered);
+
+        peaks = getPeaks(resultant);
+        peaksFiltered = getPeaks(resultantFiltered);
+
+        xZeroCrossings = getZeroCrossings(xMagListFiltered);
+        yZeroCrossings = getZeroCrossings(yMagListFiltered);
+        zZeroCrossings = getZeroCrossings(zMagListFiltered);
+    }
+
+    public double calculateMean(ArrayList<Double> dataList)
+    {
+        int count = dataList.size();
+        double sum = 0;
+        for(double tempElement:dataList)sum = sum+tempElement;
+        return Math.round((sum / count) * 1000d) / 1000d;
+    }
+
+    public void getFrequencyDomainFeatures()
+    {
+        double[] realX = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
+        double[] realY = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
+        double[] realZ = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
+        double[] imag = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
+
+        for(int i = 0; )
+    }
+
+    public void performFFT(double[] real, double[] imag)
+    {
+        int n = real.length;
+        if (n != imag.length)
+            throw new IllegalArgumentException("Mismatched lengths");
+        int levels = 31 - Integer.numberOfLeadingZeros(n);
+        if (1 << levels != n)
+            throw new IllegalArgumentException("Length is not a power of 2");
+
+        double[] cosTable = new double[n / 2];
+        double[] sinTable = new double[n / 2];
+        for (int i = 0; i < n / 2; i++) {
+            cosTable[i] = Math.cos(2 * Math.PI * i / n);
+            sinTable[i] = Math.sin(2 * Math.PI * i / n);
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            int j = Integer.reverse(i) >>> (32 - levels);
+            if (j > i) {
+                double temp = real[i];
+                real[i] = real[j];
+                real[j] = temp;
+                temp = imag[i];
+                imag[i] = imag[j];
+                imag[j] = temp;
+            }
+        }
+
+        for (int size = 2; size <= n; size *= 2)
+        {
+            int halfsize = size / 2;
+            int tablestep = n / size;
+            for (int i = 0; i < n; i += size)
+            {
+                for (int j = i, k = 0; j < i + halfsize; j++, k += tablestep)
+                {
+                    int l = j + halfsize;
+                    double tpre =  real[l] * cosTable[k] + imag[l] * sinTable[k];
+                    double tpim = -real[l] * sinTable[k] + imag[l] * cosTable[k];
+                    real[l] = real[j] - tpre;
+                    imag[l] = imag[j] - tpim;
+                    real[j] += tpre;
+                    imag[j] += tpim;
+                }
+            }
+            if (size == n)
+                break;
+        }
     }
 }
