@@ -230,9 +230,13 @@ public class dataCollectionService extends Service
         if(varianceFiltered == 0 || variance == 0)return;
         try
         {
+            boolean fileExists = true;
             File csvFile = new File(rootDirectory + "/Data.csv");
+            if(!csvFile.exists())fileExists = false;
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
+            String header[] = {"Mean", "MeanFiltered", "Variance", "VarianceFiltered", "xVariance", "yVariance", "zVariance", "xZeroCrossings", "yZeroCrossings", "zZeroCrossings", "Peaks", "PeaksFiltered", "xDCComponent", "yDCComponent", "zDCComponent", "xSpectralEnergy", "ySpectralEnergy", "zSpectralEnergy", "xEntropy", "yEntropy", "zEntropy", "Activity"};
+            if(!fileExists) writer.writeNext(header);
             String[] data = {"" + mean, "" + meanFiltered, "" + variance, "" + varianceFiltered, "" + xVariance, "" + yVariance, "" + zVariance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks, "" + peaksFiltered, "" + xDCComponent, "" + yDCComponent, "" + zDCComponent, "" + xSpectralEnergy, "" + ySpectralEnergy, "" + zSpectralEnergy, "" + xEntropy, "" + yEntropy, "" + zEntropy, label};
             writer.writeNext(data);
             writer.close();
@@ -515,15 +519,15 @@ public class dataCollectionService extends Service
             double realSqTemp = real[i]*real[i];
             double imagSqTemp = imag[i]*imag[i];
             double tempSum = Math.round((realSqTemp + imagSqTemp)*1000d)/1000d;
-            if(i==0)dcComponent = Math.sqrt(tempSum);
+            if(i==0)dcComponent = Math.round((Math.sqrt(tempSum))*1000d)/1000d;
             else
             {
                 psdList.add(tempSum);
                 psdSum = psdSum + tempSum;
             }
         }
-        double psd = psdSum/psdList.size();
-        double entropy = calculateEntropy(psdList);
+        double psd =  Math.round((psdSum/psdList.size())*1000d)/1000d;
+        double entropy = Math.round((calculateEntropy(psdList))*1000d)/1000d;
         return ""+dcComponent+";"+psd+";"+entropy;
     }
 
