@@ -432,7 +432,7 @@ public class Accelerometer extends AppCompatActivity
             ArrayList<Double> magList = new ArrayList<>(), psdList = new ArrayList<>(), normPSDList = new ArrayList<>();
             double psdSum = 0;
 
-            for(int i=1;i<32;i++)
+            for(int i=0;i<real.length;i++)
             {
                 double realSqTemp = real[i]*real[i];
                 double imagSqTemp = imag[i]*imag[i];
@@ -453,8 +453,8 @@ public class Accelerometer extends AppCompatActivity
                 normPSDList.add(tempNormPSD);
             }
             writer.close();
-            energy = calculateEntropy(psdList);
-            //energy = magList.get(0);
+            //energy = calculateEntropy(psdList);
+            energy = magList.get(0);
         } catch (IOException e)
         {
             e.printStackTrace();

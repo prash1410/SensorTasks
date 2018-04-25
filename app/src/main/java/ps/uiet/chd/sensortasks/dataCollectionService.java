@@ -304,7 +304,6 @@ public class dataCollectionService extends Service
             yRawMagList.remove(64);
             zRawMagList.remove(64);
         }
-        Log.e("DataCollection: ",""+xMagList.size());
         filterData();
     }
 
@@ -539,6 +538,6 @@ public class dataCollectionService extends Service
             double entropyTemp = temp*(Math.log(temp)/Math.log(2));
             entropySum = entropySum + entropyTemp;
         }
-        return 0 - entropySum;
+        return (0 - entropySum)/psdList.size();
     }
 }
