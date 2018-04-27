@@ -8,23 +8,13 @@
     android:layout_height="match_parent"
     tools:context="ps.uiet.chd.sensortasks.MainActivity">
 
-    <Button
-        android:id="@+id/LocationButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="150dp"
-        android:layout_centerHorizontal="true"
-        android:paddingLeft="20dp"
-        android:paddingRight="20dp"
-        android:textColor="#000"
-        android:text="Location"/>
+
 
     <Button
         android:id="@+id/AccelerometerButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/LocationButton"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="150dp"
         android:layout_centerHorizontal="true"
         android:paddingLeft="20dp"
         android:paddingRight="20dp"

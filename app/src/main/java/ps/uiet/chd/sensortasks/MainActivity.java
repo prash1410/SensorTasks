@@ -18,6 +18,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
@@ -30,7 +31,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 {
     boolean ServiceStarted = false;
     RelativeLayout MainActivityLayout;
-    Button LocationButton,Accelerometer,AccelerometerService,wekaButton;
+    Button Accelerometer,AccelerometerService,wekaButton;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -38,8 +39,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         Accelerometer = findViewById(R.id.AccelerometerButton);
         Accelerometer.setOnClickListener(this);
-        LocationButton = findViewById(R.id.LocationButton);
-        LocationButton.setOnClickListener(this);
         AccelerometerService = findViewById(R.id.AccelerometerServiceButton);
         AccelerometerService.setOnClickListener(this);
         wekaButton = findViewById(R.id.dataCollectionButton);
@@ -77,7 +76,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
                     {
-                        LocationButton.callOnClick();
+                        Log.e("","");
                     }
                 }
                 else
@@ -103,13 +102,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     {
         switch (v.getId())
         {
-            case R.id.LocationButton:
-                if(checkRequestLocationPermission(getApplicationContext()))
-                {
-                    if(isGPSEnabled())locationFunction();
-                    else showSettingsAlert();
-                }
-                break;
             case R.id.AccelerometerButton:
                 Intent intent2 = new Intent(getApplicationContext(),Accelerometer.class);
                 startActivity(intent2);
@@ -135,14 +127,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             default:
                 break;
         }
-    }
-
-    @SuppressLint("MissingPermission")
-    public void locationFunction()
-    {
-        //gpsTracker = new GPSTracker(MainActivity.this);
-        Intent intent = new Intent(getApplicationContext(),LocationActivity.class);
-        startActivity(intent);
     }
 
     public void showSettingsAlert()

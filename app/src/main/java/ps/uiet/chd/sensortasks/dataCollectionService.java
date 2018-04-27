@@ -449,6 +449,7 @@ public class dataCollectionService extends Service
             realZ[i] = zMagList.get(i);
         }
         String xFeatures[] = performFFT(realX,imag).split(";");
+
         String yFeatures[] = performFFT(realY,imag).split(";");
         String zFeatures[] = performFFT(realZ,imag).split(";");
 

@@ -34,19 +34,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".LocationActivity" />
         <activity android:name=".Accelerometer" />
 
         <service
             android:name=".AccelerometerBackgroundService"
             android:enabled="true" />
-        <service
-            android:name=".BackgroundService"
-            android:enabled="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
         <service android:name=".dataCollectionService" />
 
-        <activity android:name=".WekaActivity" />
         <activity android:name=".dataCollection"></activity>
     </application>
 
