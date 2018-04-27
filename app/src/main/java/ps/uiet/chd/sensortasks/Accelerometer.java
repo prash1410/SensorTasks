@@ -44,6 +44,7 @@ public class Accelerometer extends AppCompatActivity
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
+    ArrayList<Double> magList = new ArrayList<>();
     double xAngleGravity = 0, yAngleGravity = 0,zAngleGravity = 0;
     double gravity[] = new double[3];
     static double initX,initY,initZ;
@@ -278,7 +279,7 @@ public class Accelerometer extends AppCompatActivity
             double energyY = transformRadix2(yMag,imag);
             double energyZ = transformRadix2(zMag,imag);
 
-            AccelerometerValue.setText("Variance: "+variance+"\n"+greaterCounter+"\n"+elapsedTime);
+            AccelerometerValue.setText("Variance: "+variance+"\n"+greaterCounter+"\n"+elapsedTime + "\n" + energyX + "\n" + energyY + "\n" + energyZ);
 
         } catch (IOException e)
         {
@@ -426,10 +427,11 @@ public class Accelerometer extends AppCompatActivity
             FileWriter fileWriter = new FileWriter(csvFile,true);
             CSVWriter writer = new CSVWriter(fileWriter);
 
-            String[] header = {"Real", "Imaginary"};
+            String[] header = {"Real", "Imaginary", "Magnitude", "Laplacian"};
             writer.writeNext(header);
 
-            ArrayList<Double> magList = new ArrayList<>(), psdList = new ArrayList<>(), normPSDList = new ArrayList<>();
+            magList.clear();
+            ArrayList<Double> psdList = new ArrayList<>();
             double psdSum = 0;
 
             for(int i=0;i<real.length;i++)
@@ -443,18 +445,23 @@ public class Accelerometer extends AppCompatActivity
                 psdSum = psdSum + tempSum;
                 real[i] = Math.round(real[i]*1000d)/1000d;
                 imag[i] = Math.round(imag[i]*1000d)/1000d;
-                String[] data = {""+real[i], ""+imag[i]};
-                writer.writeNext(data);
             }
 
-            for (int i=0; i<psdList.size(); i++)
+            ArrayList<Double> laplaceList = new ArrayList<>();
+            for (int i = 0; i < real.length - 1; i++)
             {
-                double tempNormPSD = Math.round((psdList.get(i)/psdSum)*1000d)/1000d;
-                normPSDList.add(tempNormPSD);
+                double laplacian;
+                if(i == 0 || i == real.length - 1)laplacian = Math.round(magList.get(i));
+                else laplacian = Math.round((magList.get(i-1) - 2*(magList.get(i)) + magList.get(i+1)));
+                String[] data = {""+real[i], ""+imag[i], ""+magList.get(i), ""+laplacian};
+                writer.writeNext(data);
+                laplaceList.add(laplacian);
             }
+
             writer.close();
             //energy = calculateEntropy(psdList);
-            energy = magList.get(0);
+            energy = getZeroCrossings(laplaceList);
+            //energy = magList.get(0);
         } catch (IOException e)
         {
             e.printStackTrace();

@@ -10,7 +10,6 @@ import android.hardware.SensorManager;
 import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.io.File;
@@ -54,9 +53,11 @@ public class dataCollectionService extends Service
     double variance, varianceFiltered, xVariance, yVariance, zVariance;
     double mean, meanFiltered;
     int peaks, peaksFiltered, xZeroCrossings, yZeroCrossings, zZeroCrossings;
+    int resultantZeroCrossings, resultantFilteredZeroCrossings;
     double xDCComponent, yDCComponent, zDCComponent;
     double xSpectralEnergy, ySpectralEnergy, zSpectralEnergy;
     double xEntropy, yEntropy, zEntropy;
+    double xFFTZeroCrossings, yFFTZeroCrossings, zFFTZeroCrossings;
 
     double xAngleGravity, yAngleGravity, zAngleGravity;
     double gravity[] = new double[3];
@@ -235,9 +236,9 @@ public class dataCollectionService extends Service
             if(!csvFile.exists())fileExists = false;
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            String header[] = {"Mean", "MeanFiltered", "Variance", "VarianceFiltered", "xVariance", "yVariance", "zVariance", "xZeroCrossings", "yZeroCrossings", "zZeroCrossings", "Peaks", "PeaksFiltered", "xDCComponent", "yDCComponent", "zDCComponent", "xSpectralEnergy", "ySpectralEnergy", "zSpectralEnergy", "xEntropy", "yEntropy", "zEntropy", "Activity"};
+            String header[] = {"Mean", "MeanFiltered", "Variance", "VarianceFiltered", "xVariance", "yVariance", "zVariance", "xZeroCrossings", "yZeroCrossings", "zZeroCrossings", "Peaks", "PeaksFiltered", "ResultantZeroCrossings", "ResultantFilteredZeroCrossings", "xDCComponent", "yDCComponent", "zDCComponent", "xSpectralEnergy", "ySpectralEnergy", "zSpectralEnergy", "xEntropy", "yEntropy", "zEntropy", "xFFTZeroCrossings", "yFFTZeroCrossings", "zFFTZeroCrossings", "Activity"};
             if(!fileExists) writer.writeNext(header);
-            String[] data = {"" + mean, "" + meanFiltered, "" + variance, "" + varianceFiltered, "" + xVariance, "" + yVariance, "" + zVariance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks, "" + peaksFiltered, "" + xDCComponent, "" + yDCComponent, "" + zDCComponent, "" + xSpectralEnergy, "" + ySpectralEnergy, "" + zSpectralEnergy, "" + xEntropy, "" + yEntropy, "" + zEntropy, label};
+            String[] data = {"" + mean, "" + meanFiltered, "" + variance, "" + varianceFiltered, "" + xVariance, "" + yVariance, "" + zVariance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks, "" + peaksFiltered, "" + resultantZeroCrossings, "" + resultantFilteredZeroCrossings, "" + xDCComponent, "" + yDCComponent, "" + zDCComponent, "" + xSpectralEnergy, "" + ySpectralEnergy, "" + zSpectralEnergy, "" + xEntropy, "" + yEntropy, "" + zEntropy, "" + xFFTZeroCrossings, "" + yFFTZeroCrossings, "" + zFFTZeroCrossings, label};
             writer.writeNext(data);
             writer.close();
 
@@ -421,6 +422,9 @@ public class dataCollectionService extends Service
         xZeroCrossings = getZeroCrossings(xMagListFiltered);
         yZeroCrossings = getZeroCrossings(yMagListFiltered);
         zZeroCrossings = getZeroCrossings(zMagListFiltered);
+
+        resultantZeroCrossings = getZeroCrossings(computeLaplacian(resultant));
+        resultantFilteredZeroCrossings = getZeroCrossings(computeLaplacian(resultantFiltered));
     }
 
     public double calculateMean(ArrayList<Double> dataList)
@@ -459,6 +463,10 @@ public class dataCollectionService extends Service
         xEntropy = Double.valueOf(xFeatures[2]);
         yEntropy = Double.valueOf(yFeatures[2]);
         zEntropy = Double.valueOf(zFeatures[2]);
+
+        xFFTZeroCrossings = Integer.valueOf(xFeatures[3]);
+        yFFTZeroCrossings = Integer.valueOf(yFeatures[3]);
+        zFFTZeroCrossings = Integer.valueOf(zFeatures[3]);
     }
 
     public String performFFT(double[] real, double[] imag)
@@ -511,23 +519,25 @@ public class dataCollectionService extends Service
                 break;
         }
 
-        ArrayList<Double> psdList = new ArrayList<>();
+        ArrayList<Double> psdList = new ArrayList<>(), fftMagList = new ArrayList<>();
         double psdSum = 0, dcComponent = 0;
-        for(int i=0;i<32;i++)
+        for(int i=0;i<real.length;i++)
         {
             double realSqTemp = real[i]*real[i];
             double imagSqTemp = imag[i]*imag[i];
             double tempSum = Math.round((realSqTemp + imagSqTemp)*1000d)/1000d;
             if(i==0)dcComponent = Math.round((Math.sqrt(tempSum))*1000d)/1000d;
-            else
+            if(i > 0 && i < 32)
             {
                 psdList.add(tempSum);
                 psdSum = psdSum + tempSum;
             }
+            fftMagList.add(Math.sqrt(tempSum));
         }
         double psd =  Math.round((psdSum/psdList.size())*1000d)/1000d;
         double entropy = Math.round((calculateEntropy(psdList))*1000d)/1000d;
-        return ""+dcComponent+";"+psd+";"+entropy;
+        int fftLaplacian = getZeroCrossings(computeLaplacian(fftMagList));
+        return ""+dcComponent+";"+psd+";"+entropy+";"+fftLaplacian;
     }
 
     public double calculateEntropy(ArrayList<Double> psdList)
@@ -538,6 +548,19 @@ public class dataCollectionService extends Service
             double entropyTemp = temp*(Math.log(temp)/Math.log(2));
             entropySum = entropySum + entropyTemp;
         }
-        return (0 - entropySum)/psdList.size();
+        return entropySum/psdList.size();
+    }
+
+    public ArrayList<Double> computeLaplacian(ArrayList<Double> dataList)
+    {
+        ArrayList<Double> laplaceList = new ArrayList<>();
+        for (int i = 0; i < dataList.size(); i++)
+        {
+            double laplacian;
+            if(i == 0 || i == dataList.size() - 1)laplacian = Math.round(dataList.get(i));
+            else laplacian = Math.round((dataList.get(i-1) - 2*(dataList.get(i)) + dataList.get(i+1)));
+            laplaceList.add(laplacian);
+        }
+        return laplaceList;
     }
 }
