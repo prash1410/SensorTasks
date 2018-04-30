@@ -196,18 +196,15 @@ public class dataCollectionService extends Service
     {
         accelerometerActive = false;
         Toast.makeText(getApplicationContext(), "Service stopped", Toast.LENGTH_LONG).show();
-        if (AccelerometerManager != null && AccelerometerListener != null)
-            AccelerometerManager.unregisterListener(AccelerometerListener);
+        if (AccelerometerManager != null && AccelerometerListener != null) AccelerometerManager.unregisterListener(AccelerometerListener);
         try
         {
             rawDataCSVWriter.flush();
             rawDataFileWriter.close();
             rawDataCSVWriter.close();
             rawDataFileWriter.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-
+        catch (IOException e) { e.printStackTrace(); }
         initializeVariables();
     }
 
@@ -236,9 +233,11 @@ public class dataCollectionService extends Service
             if(!csvFile.exists())fileExists = false;
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
-            String header[] = {"Mean", "MeanFiltered", "Variance", "VarianceFiltered", "xVariance", "yVariance", "zVariance", "xZeroCrossings", "yZeroCrossings", "zZeroCrossings", "Peaks", "PeaksFiltered", "ResultantZeroCrossings", "ResultantFilteredZeroCrossings", "xDCComponent", "yDCComponent", "zDCComponent", "xSpectralEnergy", "ySpectralEnergy", "zSpectralEnergy", "xEntropy", "yEntropy", "zEntropy", "xFFTZeroCrossings", "yFFTZeroCrossings", "zFFTZeroCrossings", "Activity"};
+            String header[] = {"Mean", "MeanFiltered", "Variance", "VarianceFiltered", "xVariance", "yVariance", "zVariance", "xZeroCrossings", "yZeroCrossings", "zZeroCrossings", "Peaks", "PeaksFiltered", "ResultantZeroCrossings", "ResultantFilteredZeroCrossings", "xDCComponent", "yDCComponent", "zDCComponent", "xSpectralEnergy", "ySpectralEnergy", "zSpectralEnergy", "TotalSpectralEnergy", "xEntropy", "yEntropy", "zEntropy", "TotalEntropy", "xFFTZeroCrossings", "yFFTZeroCrossings", "zFFTZeroCrossings", "Activity"};
             if(!fileExists) writer.writeNext(header);
-            String[] data = {"" + mean, "" + meanFiltered, "" + variance, "" + varianceFiltered, "" + xVariance, "" + yVariance, "" + zVariance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks, "" + peaksFiltered, "" + resultantZeroCrossings, "" + resultantFilteredZeroCrossings, "" + xDCComponent, "" + yDCComponent, "" + zDCComponent, "" + xSpectralEnergy, "" + ySpectralEnergy, "" + zSpectralEnergy, "" + xEntropy, "" + yEntropy, "" + zEntropy, "" + xFFTZeroCrossings, "" + yFFTZeroCrossings, "" + zFFTZeroCrossings, label};
+            double totalSpectralEnergy = Math.round((xSpectralEnergy+ySpectralEnergy+zSpectralEnergy)*1000d)/1000d;
+            double totalEntropy = Math.round((xEntropy+yEntropy+zEntropy)*1000d)/1000d;
+            String[] data = {"" + mean, "" + meanFiltered, "" + variance, "" + varianceFiltered, "" + xVariance, "" + yVariance, "" + zVariance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks, "" + peaksFiltered, "" + resultantZeroCrossings, "" + resultantFilteredZeroCrossings, "" + xDCComponent, "" + yDCComponent, "" + zDCComponent, "" + xSpectralEnergy, "" + ySpectralEnergy, "" + zSpectralEnergy, "" + totalSpectralEnergy, "" + xEntropy, "" + yEntropy, "" + zEntropy, "" + totalEntropy, "" + xFFTZeroCrossings, "" + yFFTZeroCrossings, "" + zFFTZeroCrossings, label};
             writer.writeNext(data);
             writer.close();
 
