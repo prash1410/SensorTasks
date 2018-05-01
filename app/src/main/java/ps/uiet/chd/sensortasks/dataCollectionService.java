@@ -218,14 +218,12 @@ public class dataCollectionService extends Service
     @SuppressLint("SimpleDateFormat")
     public void produceFinalResults()
     {
-
+        if(varianceFiltered == 0 || variance == 0)return;
         for(int i = 0;i < xMagList.size(); i++)
         {
             String[] data = {""+xRawMagList.get(i), ""+yRawMagList.get(i), ""+zRawMagList.get(i), ""+xMagList.get(i), ""+yMagList.get(i), ""+zMagList.get(i), ""+xRawMagListFiltered.get(i), ""+yRawMagListFiltered.get(i), ""+zRawMagListFiltered.get(i), ""+xMagListFiltered.get(i), ""+yMagListFiltered.get(i), ""+zMagListFiltered.get(i), ""+resultant.get(i), ""+resultantFiltered.get(i), label};
             rawDataCSVWriter.writeNext(data);
         }
-
-        if(varianceFiltered == 0 || variance == 0)return;
         try
         {
             boolean fileExists = true;
