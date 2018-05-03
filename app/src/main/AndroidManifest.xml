@@ -41,7 +41,7 @@
             android:enabled="true" />
         <service android:name=".dataCollectionService" />
 
-        <activity android:name=".dataCollection"></activity>
+        <activity android:name=".dataCollection" android:launchMode="singleTask"/>
     </application>
 
 </manifest>

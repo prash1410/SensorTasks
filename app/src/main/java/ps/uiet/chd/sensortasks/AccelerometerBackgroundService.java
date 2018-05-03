@@ -196,7 +196,6 @@ public class AccelerometerBackgroundService extends Service
     public void deactivateAccelerometer()
     {
         accelerometerActive = false;
-        Toast.makeText(getApplicationContext(), "Service stopped", Toast.LENGTH_LONG).show();
         if (AccelerometerManager != null && AccelerometerListener != null)
             AccelerometerManager.unregisterListener(AccelerometerListener);
         initializeVariables();
@@ -329,15 +328,18 @@ public class AccelerometerBackgroundService extends Service
     public String wekaPredict(final double var, final int xZeroCross, final int yZeroCross, final int zZeroCross, final int peaks)
     {
         String result = "Inconclusive";
-        if (classifier == null) {
+        if (classifier == null)
+        {
             AssetManager assetManager = getAssets();
-            try {
+            try
+            {
                 classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open("PolyKernel.model"));
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        if (classifier != null) {
+        if (classifier != null)
+        {
             try {
 
                 final Attribute attributeVariance = new Attribute("Variance");
@@ -376,14 +378,10 @@ public class AccelerometerBackgroundService extends Service
                 };
                 newInstance.setDataset(dataUnpredicted);
                 double predictedResult = classifier.classifyInstance(newInstance);
-
-                /*
                 if (predictedResult == 0.0) result = "Walking";
                 if (predictedResult == 1.0) result = "Still";
                 if (predictedResult == 2.0) result = "Driving";
-                */
 
-                result = "" + predictedResult;
             } catch (Exception e)
             {
                 e.printStackTrace();

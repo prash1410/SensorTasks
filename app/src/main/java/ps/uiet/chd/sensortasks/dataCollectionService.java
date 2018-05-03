@@ -1,8 +1,13 @@
 package ps.uiet.chd.sensortasks;
 
 import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -19,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Objects;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -81,14 +87,47 @@ public class dataCollectionService extends Service
     {
         super.onCreate();
         createDirectoryIfNotExists();
-        Toast.makeText(getApplicationContext(),"",Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        label = intent.getStringExtra("Label");
-        if (!accelerometerActive) activateAccelerometer();
+        if (Objects.requireNonNull(intent.getAction()).equals("Start"))
+        {
+            label = intent.getStringExtra("Label");
+            Intent notificationIntent = new Intent(this, dataCollection.class);
+            notificationIntent.setAction("Main");
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+            Intent stopIntent = new Intent(this, dataCollectionService.class);
+            stopIntent.setAction("Stop");
+            PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
+
+            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
+            @SuppressLint({"NewApi", "LocalSuppress"})
+            Notification notification = new Notification.Builder(this)
+                    .setContentTitle("Data collection service")
+                    .setTicker("Data collection service")
+                    .setContentText(label)
+                    .setStyle(new Notification.BigTextStyle().bigText(label))
+                    .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                    .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                    .setContentIntent(pendingIntent)
+                    .setOngoing(true)
+                    .setWhen(System.currentTimeMillis())
+                    .setShowWhen(true)
+                    .setPriority(Notification.PRIORITY_HIGH)
+                    .setColor(Color.CYAN)
+                    .addAction(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent).build();
+            startForeground(101, notification);
+            if (!accelerometerActive) activateAccelerometer();
+        }
+        else if (intent.getAction().equals("Stop"))
+        {
+            stopForeground(true);
+            stopSelf();
+        }
         return Service.START_STICKY_COMPATIBILITY;
     }
 
@@ -195,7 +234,6 @@ public class dataCollectionService extends Service
     public void deactivateAccelerometer()
     {
         accelerometerActive = false;
-        Toast.makeText(getApplicationContext(), "Service stopped", Toast.LENGTH_LONG).show();
         if (AccelerometerManager != null && AccelerometerListener != null) AccelerometerManager.unregisterListener(AccelerometerListener);
         try
         {
@@ -252,9 +290,11 @@ public class dataCollectionService extends Service
         int counter = 5, zeroCrossings = 0;
         positive = magList.get(counter) > 0;
         counter++;
-        while (counter < magList.size()) {
+        while (counter < magList.size())
+        {
             boolean tempPositive = magList.get(counter) > 0;
-            if (positive != tempPositive) {
+            if (positive != tempPositive)
+            {
                 zeroCrossings++;
                 positive = tempPositive;
             }
