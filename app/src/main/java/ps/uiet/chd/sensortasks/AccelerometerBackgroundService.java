@@ -447,6 +447,7 @@ public class AccelerometerBackgroundService extends Service
                     }
                 };
 
+                
                 Instances dataUnpredicted = new Instances("TestInstances", attributeList, 1);
                 dataUnpredicted.setClassIndex(dataUnpredicted.numAttributes() - 1);
                 DenseInstance newInstance = new DenseInstance(dataUnpredicted.numAttributes()) {
