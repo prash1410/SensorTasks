@@ -52,8 +52,8 @@ public class AccelerometerBackgroundService extends Service
     LocationCallback locationCallback;
 
     Handler handler = null;
-    Handler serverTaskHandler = null;
-    Runnable serverTaskRunnable = null;
+    //Handler serverTaskHandler = null;
+    //Runnable serverTaskRunnable = null;
     static int deviceID;
     String lastFile;
     int drivingCounter;
@@ -95,15 +95,19 @@ public class AccelerometerBackgroundService extends Service
     {
         Toast.makeText(this, "Service started", Toast.LENGTH_SHORT).show();
         if (!accelerometerActive && checkPermissions()) activateAccelerometer();
+
+        /*
         handler = new Handler();
         serverTaskHandler = new Handler();
-        serverTaskRunnable = new Runnable() {
+        serverTaskRunnable = new Runnable()
+        {
             public void run() {
                 new GetServerUpdates().execute("" + deviceID);
                 serverTaskHandler.postDelayed(serverTaskRunnable, 20000);
             }
         };
         serverTaskHandler.postDelayed(serverTaskRunnable, 30000);
+        */
         return Service.START_STICKY_COMPATIBILITY;
     }
 
@@ -112,11 +116,12 @@ public class AccelerometerBackgroundService extends Service
     {
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
         if (accelerometerActive) deactivateAccelerometer();
-        if (recording) {
+        if (recording)
+        {
             stopRecording();
             handler.removeCallbacksAndMessages(null);
         }
-        serverTaskHandler.removeCallbacksAndMessages(null);
+        //serverTaskHandler.removeCallbacksAndMessages(null);
     }
 
     public void createDirectoryIfNotExists()
@@ -139,7 +144,8 @@ public class AccelerometerBackgroundService extends Service
         Accelerometer = AccelerometerManager.getSensorList(Sensor.TYPE_ACCELEROMETER).get(0);
         AccelerometerListener = new SensorEventListener() {
             @Override
-            public void onSensorChanged(SensorEvent event) {
+            public void onSensorChanged(SensorEvent event)
+            {
                 final float alpha = 0.8f;
                 double x = event.values[0];
                 double y = event.values[1];
@@ -150,7 +156,8 @@ public class AccelerometerBackgroundService extends Service
                 gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
                 gravity[2] = alpha * gravity[2] + (1 - alpha) * z;
 
-                if (sampleCount == 0) {
+                if (sampleCount == 0)
+                {
                     initX = Math.round(x * 100d) / 100d;
                     initY = Math.round(y * 100d) / 100d;
                     initZ = Math.round(z * 100d) / 100d;

@@ -168,23 +168,27 @@ public class dataCollectionService extends Service
             @Override
             public void onSensorChanged(SensorEvent event)
             {
+                // alpha is calculated as t / (t + dt)
+                // with t, the low-pass filter's time-constant
+                // and dT, the event delivery rate
                 final float alpha = 0.8f;
-                double x = event.values[0];
+
+                double x = event.values[0]; // raw acceleration along x-axis
                 double rawX = x;
-                double y = event.values[1];
+                double y = event.values[1]; // along y-axis
                 double rawY = y;
-                double z = event.values[2];
+                double z = event.values[2]; // along z-axis
                 double rawZ = z;
 
-                gravity[0] = alpha * gravity[0] + (1 - alpha) * x;
-                gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
-                gravity[2] = alpha * gravity[2] + (1 - alpha) * z;
+                gravity[0] = alpha * gravity[0] + (1 - alpha) * x; // isolating gravity effect along x-axis
+                gravity[1] = alpha * gravity[1] + (1 - alpha) * y; // along y-axis
+                gravity[2] = alpha * gravity[2] + (1 - alpha) * z; // along z-axis
 
                 if (sampleCount == 0) findMotionDirection(x, y, z);
 
-                x = rawX - gravity[0];
-                y = rawY - gravity[1];
-                z = rawZ - gravity[2];
+                x = rawX - gravity[0]; // acceleration along x-axis excluding gravity
+                y = rawY - gravity[1]; // along y-axis
+                z = rawZ - gravity[2]; // along z-axis
 
                 x = x * Math.sin(Math.toRadians(xAngleGravity));
                 y = y * Math.sin(Math.toRadians(yAngleGravity));

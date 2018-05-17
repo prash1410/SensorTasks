@@ -7,15 +7,6 @@
     android:layout_height="match_parent"
     tools:context=".dataCollection">
 
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000"
-        android:id="@+id/toggleAccelerometer"
-        android:padding="10dp"
-        android:text="Start Accelerometer"
-        android:layout_alignParentBottom="true"/>
-
     <RadioGroup
         android:id="@+id/activityRG"
         android:layout_alignParentTop="true"
@@ -49,6 +40,15 @@
             android:paddingEnd="20dp"
             android:background="#fff"/>
     </RadioGroup>
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#000"
+        android:id="@+id/toggleAccelerometer"
+        android:padding="10dp"
+        android:text="Start Accelerometer"
+        android:layout_below="@+id/activityRG"/>
 
     <ImageView
         android:layout_marginTop="30dp"

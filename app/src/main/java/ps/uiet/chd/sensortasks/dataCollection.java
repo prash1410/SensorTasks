@@ -30,6 +30,7 @@ public class dataCollection extends AppCompatActivity implements View.OnClickLis
         setContentView(R.layout.activity_data_collection);
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_close_white_18dp);
+        getSupportActionBar().setTitle("Data Collection");
         toggleAccelerometer = findViewById(R.id.toggleAccelerometer);
         toggleAccelerometer.setOnClickListener(this);
         labelRG = findViewById(R.id.activityRG);
