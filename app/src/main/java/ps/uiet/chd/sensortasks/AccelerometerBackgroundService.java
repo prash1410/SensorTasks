@@ -2,15 +2,24 @@ package ps.uiet.chd.sensortasks;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -36,10 +45,10 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
-import au.com.bytecode.opencsv.CSVWriter;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -83,8 +92,8 @@ public class AccelerometerBackgroundService extends Service
     int peaks, peaksFiltered, xZeroCrossings, yZeroCrossings, zZeroCrossings;
     int resultantZeroCrossings, resultantFilteredZeroCrossings;
     double xDCComponent, yDCComponent, zDCComponent;
-    double xSpectralEnergy, ySpectralEnergy, zSpectralEnergy;
-    double xEntropy, yEntropy, zEntropy;
+    double xSpectralEnergy, ySpectralEnergy, zSpectralEnergy, totalSpectralEnergy;
+    double xEntropy, yEntropy, zEntropy, totalEntropy;
     double xFFTZeroCrossings, yFFTZeroCrossings, zFFTZeroCrossings;
     double xAngleGravity, yAngleGravity, zAngleGravity;
     double gravity[] = new double[3];
@@ -105,6 +114,7 @@ public class AccelerometerBackgroundService extends Service
         super.onCreate();
         createDirectoryIfNotExists();
         deviceID = createDeviceID();
+        createNotificationChannel();
     }
 
     @Nullable
@@ -117,7 +127,7 @@ public class AccelerometerBackgroundService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        Toast.makeText(this, "Service started", Toast.LENGTH_SHORT).show();
+        createNotification(intent);
         if (!accelerometerActive && checkPermissions()) activateAccelerometer();
 
         /*
@@ -255,21 +265,16 @@ public class AccelerometerBackgroundService extends Service
     @SuppressLint("SimpleDateFormat")
     public void produceFinalResults()
     {
-        double variance = calculateVariance();
-        if(variance == 0)
+        String result;
+        if(variance == 0 || varianceFiltered == 0)
         {
-            drivingCounter = 0;
-            return;
+            result = "Still";
+            //drivingCounter = 0;
         }
-
-        int xZeroCrossings = getZeroCrossings(xMagList);
-        int yZeroCrossings = getZeroCrossings(yMagList);
-        int zZeroCrossings = getZeroCrossings(zMagList);
-        int peaks = getPeaks();
-
-        String result = wekaPredict(variance, xZeroCrossings, yZeroCrossings, zZeroCrossings, peaks);
-        if (result.equals("Driving")) drivingCounter++;
-        else drivingCounter = 0;
+        else result = wekaPredict();
+        updateNotification(result);
+        //if (result.equals("Driving")) drivingCounter++;
+        //else drivingCounter = 0;
         SimpleDateFormat simpleDateFormat;
         Calendar calender = Calendar.getInstance();
         simpleDateFormat = new SimpleDateFormat("hh:mm:s a");
@@ -277,12 +282,14 @@ public class AccelerometerBackgroundService extends Service
 
         try
         {
+            /*
             File csvFile = new File(rootDirectory + "/CSVData/Output.csv");
             FileWriter fileWriter = new FileWriter(csvFile, true);
             CSVWriter writer = new CSVWriter(fileWriter);
             String[] data = {"" + variance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks};
             writer.writeNext(data);
             writer.close();
+            */
 
             File logsFile = new File(rootDirectory + "/CSVData/Activity Log.txt");
             FileWriter fileWriter1 = new FileWriter(logsFile, true);
@@ -294,12 +301,13 @@ public class AccelerometerBackgroundService extends Service
             e.printStackTrace();
         }
 
+        /*
         if (drivingCounter >= 7 && !recording)
         {
             getSoundSample();
             getLocation();
         }
-
+        */
     }
 
     public void trimArrayLists()
@@ -369,7 +377,7 @@ public class AccelerometerBackgroundService extends Service
             AssetManager assetManager = getAssets();
             try
             {
-                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open("PolyKernel.model"));
+                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open("Ham Polynomial Kernel Exponent 3 C 100.0 94.0.model"));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -377,7 +385,6 @@ public class AccelerometerBackgroundService extends Service
         if (classifier != null)
         {
             try {
-
                 final Attribute attributeMean = new Attribute("Mean");
                 final Attribute attributeMeanFiltered = new Attribute("MeanFiltered");
                 final Attribute attributeVariance = new Attribute("Variance");
@@ -406,7 +413,8 @@ public class AccelerometerBackgroundService extends Service
                 final Attribute attributeXFFTZeroCrossings = new Attribute("xFFTZeroCrossings");
                 final Attribute attributeYFFTZeroCrossings = new Attribute("yFFTZeroCrossings");
                 final Attribute attributeZFFTZeroCrossings = new Attribute("zFFTZeroCrossings");
-                final List<String> classes = new ArrayList<String>() {
+                final List<String> classes = new ArrayList<String>()
+                {
                     {
                         add("Dummy");
                     }
@@ -447,24 +455,46 @@ public class AccelerometerBackgroundService extends Service
                     }
                 };
 
-                
                 Instances dataUnpredicted = new Instances("TestInstances", attributeList, 1);
                 dataUnpredicted.setClassIndex(dataUnpredicted.numAttributes() - 1);
                 DenseInstance newInstance = new DenseInstance(dataUnpredicted.numAttributes()) {
                     {
                         setValue(attributeMean, mean);
-                        setValue(attributeVariance, var);
-                        setValue(attributeXZeroCrossings, xZeroCross);
-                        setValue(attributeYZeroCrossings, yZeroCross);
-                        setValue(attributeZZeroCrossings, zZeroCross);
-                        setValue(attributeZZeroCrossings, peaks);
+                        setValue(attributeMeanFiltered, meanFiltered);
+                        setValue(attributeVariance, variance);
+                        setValue(attributeVarianceFiltered, varianceFiltered);
+                        setValue(attributeXVariance, xVariance);
+                        setValue(attributeYVariance, yVariance);
+                        setValue(attributeZVariance, zVariance);
+                        setValue(attributeXZeroCrossings, xZeroCrossings);
+                        setValue(attributeYZeroCrossings, yZeroCrossings);
+                        setValue(attributeZZeroCrossings, zZeroCrossings);
+                        setValue(attributePeaks, peaks);
+                        setValue(attributePeaksFiltered, peaksFiltered);
+                        setValue(attributeResultantZeroCrossings, resultantZeroCrossings);
+                        setValue(attributeResultantFilteredZeroCrossings, resultantFilteredZeroCrossings);
+                        setValue(attributeXDCComponent, xDCComponent);
+                        setValue(attributeYDCComponent, yDCComponent);
+                        setValue(attributeZDCComponent, zDCComponent);
+                        setValue(attributeXSpectralEnergy, xSpectralEnergy);
+                        setValue(attributeYSpectralEnergy, ySpectralEnergy);
+                        setValue(attributeZSpectralEnergy, zSpectralEnergy);
+                        setValue(attributeTotalSpectralEnergy, totalSpectralEnergy);
+                        setValue(attributeXEntropy, xEntropy);
+                        setValue(attributeYEntropy, yEntropy);
+                        setValue(attributeZEntropy, zEntropy);
+                        setValue(attributeTotalEntropy, totalEntropy);
+                        setValue(attributeXFFTZeroCrossings, xFFTZeroCrossings);
+                        setValue(attributeYFFTZeroCrossings, yFFTZeroCrossings);
+                        setValue(attributeZFFTZeroCrossings, zFFTZeroCrossings);
                     }
                 };
                 newInstance.setDataset(dataUnpredicted);
                 double predictedResult = classifier.classifyInstance(newInstance);
-                if (predictedResult == 0.0) result = "Walking";
-                if (predictedResult == 1.0) result = "Still";
-                if (predictedResult == 2.0) result = "Driving";
+                //result = "" + predictedResult;
+                if (predictedResult == 0.0) result = "Driving";
+                if (predictedResult == 1.0) result = "Neither";
+                if (predictedResult == 2.0) result = "Walking";
 
             } catch (Exception e)
             {
@@ -763,6 +793,9 @@ public class AccelerometerBackgroundService extends Service
         xFFTZeroCrossings = Integer.valueOf(xFeatures[3]);
         yFFTZeroCrossings = Integer.valueOf(yFeatures[3]);
         zFFTZeroCrossings = Integer.valueOf(zFeatures[3]);
+
+        totalSpectralEnergy = Math.round((xSpectralEnergy+ySpectralEnergy+zSpectralEnergy)*1000d)/1000d;
+        totalEntropy = Math.round((xEntropy+yEntropy+zEntropy)*1000d)/1000d;
     }
 
     public String performFFT(double[] real, double[] imag)
@@ -858,5 +891,94 @@ public class AccelerometerBackgroundService extends Service
             laplaceList.add(laplacian);
         }
         return laplaceList;
+    }
+
+    @SuppressLint("NewApi")
+    public void createNotification(Intent intent)
+    {
+        if (Objects.requireNonNull(intent.getAction()).equals("Start"))
+        {
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction("Main");
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+            Intent stopIntent = new Intent(this, AccelerometerBackgroundService.class);
+            stopIntent.setAction("Stop");
+            PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
+
+            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
+            Notification notification =  new Notification.Builder(this)
+                    .setContentTitle("Activity recognition service")
+                    .setTicker("Activity recognition service")
+                    .setContentText("Service running")
+                    .setOnlyAlertOnce(true)
+                    .setStyle(new Notification.BigTextStyle().bigText("Service running"))
+                    .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                    .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                    .setContentIntent(pendingIntent)
+                    .setOngoing(true)
+                    .setWhen(System.currentTimeMillis())
+                    .setShowWhen(true)
+                    .setPriority(Notification.PRIORITY_HIGH)
+                    .setColor(Color.CYAN)
+                    .setChannelId("SensorTasks1410")
+                    .addAction(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent).build();
+            startForeground(101, notification);
+        }
+        else if (intent.getAction().equals("Stop"))
+        {
+            stopForeground(true);
+            stopSelf();
+        }
+    }
+
+    public void createNotificationChannel()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            String channelID = "SensorTasks1410";
+            CharSequence channelName = "SensorTasks notification channel";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel notificationChannel = new NotificationChannel(channelID, channelName, importance);
+            assert notificationManager != null;
+            notificationManager.createNotificationChannel(notificationChannel);
+        }
+    }
+
+    public void updateNotification(String status)
+    {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setAction("Main");
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        Intent stopIntent = new Intent(this, AccelerometerBackgroundService.class);
+        stopIntent.setAction("Stop");
+        PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
+
+        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
+        @SuppressLint({"NewApi", "LocalSuppress"})
+        Notification notification =  new Notification.Builder(this)
+                .setContentTitle("Activity recognition service")
+                .setTicker("Activity recognition service")
+                .setContentText(status)
+                .setOnlyAlertOnce(true)
+                .setStyle(new Notification.BigTextStyle().bigText(status))
+                .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .setWhen(System.currentTimeMillis())
+                .setShowWhen(true)
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setColor(Color.CYAN)
+                .setChannelId("SensorTasks1410")
+                .addAction(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent).build();
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        assert notificationManager != null;
+        notificationManager.notify(101, notification);
     }
 }

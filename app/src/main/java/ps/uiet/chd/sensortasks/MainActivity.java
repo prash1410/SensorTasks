@@ -44,10 +44,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         wekaButton = findViewById(R.id.dataCollectionButton);
         wekaButton.setOnClickListener(this);
         MainActivityLayout = findViewById(R.id.MainActivityLayout);
-        ServiceStarted = isMyServiceRunning(AccelerometerBackgroundService.class);
-        if(ServiceStarted)AccelerometerService.setText("Stop accelerometer\nservice");
-        else AccelerometerService.setText("Start accelerometer\nservice");
-
+        if(isMyServiceRunning(AccelerometerBackgroundService.class))
+        {
+            Intent intent = new Intent(this, AccelerometerBackgroundService.class);
+            intent.setAction("Stop");
+            stopService(intent);
+        }
     }
 
     @TargetApi(23)
@@ -109,13 +111,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.AccelerometerServiceButton:
                 if(!ServiceStarted)
                 {
-                    startService(new Intent(this, AccelerometerBackgroundService.class));
+                    Intent intent = new Intent(this, AccelerometerBackgroundService.class);
+                    intent.setAction("Start");
+                    startService(intent);
                     AccelerometerService.setText("Stop accelerometer\nService");
                     ServiceStarted = true;
+                    finish();
                 }
                 else
                 {
-                    stopService(new Intent(this, AccelerometerBackgroundService.class));
+                    Intent intent = new Intent(this, AccelerometerBackgroundService.class);
+                    intent.setAction("Stop");
+                    stopService(intent);
                     AccelerometerService.setText("Start accelerometer\nService");
                     ServiceStarted = false;
                 }
@@ -164,6 +171,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean isMyServiceRunning(Class<?> serviceClass)
     {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        assert manager != null;
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
             if (serviceClass.getName().equals(service.service.getClassName())) {
                 return true;
