@@ -42,13 +42,13 @@
     </RadioGroup>
 
     <Button
+        android:layout_alignParentBottom="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="#000"
         android:id="@+id/toggleAccelerometer"
         android:padding="10dp"
-        android:text="Start Accelerometer"
-        android:layout_below="@+id/activityRG"/>
+        android:text="Start Accelerometer"/>
 
     <ImageView
         android:layout_marginTop="30dp"

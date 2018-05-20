@@ -1,5 +1,6 @@
 package ps.uiet.chd.sensortasks;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -8,27 +9,21 @@ import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.StrictMode;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Objects;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -44,7 +39,6 @@ public class Accelerometer extends AppCompatActivity
     ArrayList <Double> xMagList = new ArrayList<>();
     ArrayList <Double> yMagList = new ArrayList<>();
     ArrayList <Double> zMagList = new ArrayList<>();
-    ArrayList<Double> magList = new ArrayList<>();
     double xAngleGravity = 0, yAngleGravity = 0,zAngleGravity = 0;
     double gravity[] = new double[3];
     static double initX,initY,initZ;
@@ -64,7 +58,7 @@ public class Accelerometer extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        getSupportActionBar().setTitle("Accelerometer");
+        Objects.requireNonNull(getSupportActionBar()).setTitle("Accelerometer");
         StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
         StrictMode.setVmPolicy(builder.build());
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -79,13 +73,10 @@ public class Accelerometer extends AppCompatActivity
         Accelerometer = AccelerometerManager.getSensorList(Sensor.TYPE_ACCELEROMETER).get(0);
         AccelerometerListener = new SensorEventListener()
         {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onSensorChanged(SensorEvent event)
             {
-                // alpha is calculated as t / (t + dT)
-                // with t, the low-pass filter's time-constant
-                // and dT, the event delivery rate
-
                 final float alpha = 0.8f;
                 double x = event.values[0];
                 double y = event.values[1];
@@ -147,6 +138,7 @@ public class Accelerometer extends AppCompatActivity
         };
         AccelerometerToggleButton.setOnClickListener(new View.OnClickListener()
         {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onClick(View view)
             {
@@ -183,6 +175,7 @@ public class Accelerometer extends AppCompatActivity
         });
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onPause()
     {
@@ -218,6 +211,7 @@ public class Accelerometer extends AppCompatActivity
     }
 
 
+    @SuppressLint("SetTextI18n")
     public void writeToFile(String data)
     {
         try
@@ -246,40 +240,14 @@ public class Accelerometer extends AppCompatActivity
             double variance = varianceSum/observations.size();
             variance = (double)Math.round(variance * 100d) / 100d;
             writer.write(data);
-            writer.append("\n\nSum: "+sum+"\nCount: "+observations.size()+"\nAverage: "+mean+"\nVariance: "+variance+"\n\n\n");
-
-            xZeroCrossings = getZeroCrossings(xMagList);
-            yZeroCrossings = getZeroCrossings(yMagList);
-            zZeroCrossings = getZeroCrossings(zMagList);
-
-
-            double maxValue = Collections.max(observations);
-            double cutOff = maxValue*0.95;
-            int greaterCounter = 0;
-            for(double element:observations) if(element>=cutOff)greaterCounter++;
-
+            writer.append("\n\nSum: ").append(String.valueOf(sum)).append("\nCount: ").append(String.valueOf(observations.size())).append("\nAverage: ").append(String.valueOf(mean)).append("\nVariance: ").append(String.valueOf(variance)).append("\n\n\n");
             tstop = System.currentTimeMillis();
             long elapsedTime = tstop-tStart;
-            //AccelerometerValue.setText("Variance: "+variance+"\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings+"\n"+greaterCounter+"\n"+elapsedTime);
-            writer.append("xAcc: "+xLinearAcceleration+"\n\nyAcc: "+yLinearAcceleration+"\n\nzAcc: "+zLinearAcceleration+"\n\nxGravityAngle: "+xAngleGravity+"\nyGravityAngle: "+yAngleGravity+"\nzGravityAngle: "+zAngleGravity+"\n\n\nX Zero Crossings: "+xZeroCrossings+"\nY Zero Crossings: "+yZeroCrossings+"\nZ Zero Crossings: "+zZeroCrossings);
+            writer.append("xAcc: ").append(xLinearAcceleration).append("\n\nyAcc: ").append(yLinearAcceleration).append("\n\nzAcc: ").append(zLinearAcceleration).append("\n\nxGravityAngle: ").append(String.valueOf(xAngleGravity)).append("\nyGravityAngle: ").append(String.valueOf(yAngleGravity)).append("\nzGravityAngle: ").append(String.valueOf(zAngleGravity)).append("\n\n\nX Zero Crossings: ").append(String.valueOf(xZeroCrossings)).append("\nY Zero Crossings: ").append(String.valueOf(yZeroCrossings)).append("\nZ Zero Crossings: ").append(String.valueOf(zZeroCrossings));
             writer.flush();
             writer.close();
-
-            double[] imag = new double[]{0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0};
-
             writeToCSV();
-            double energyX = transformRadix2(xMag,imag);
-            double energyY = transformRadix2(yMag,imag);
-            double energyZ = transformRadix2(zMag,imag);
-
-            AccelerometerValue.setText("Variance: "+variance+"\n"+greaterCounter+"\n"+elapsedTime + "\n" + energyX + "\n" + energyY + "\n" + energyZ);
+            AccelerometerValue.setText(""+elapsedTime);
 
         } catch (IOException e)
         {
@@ -347,148 +315,4 @@ public class Accelerometer extends AppCompatActivity
             e.printStackTrace();
         }
     }
-
-    public int getZeroCrossings(ArrayList<Double> magList)
-    {
-        boolean positive;
-        int counter = 5,zeroCrossings = 0;
-        positive = magList.get(counter) > 0;
-        counter++;
-        while(counter<magList.size())
-        {
-            boolean tempPositive = magList.get(counter)>0;
-            if(positive!=tempPositive)
-            {
-                zeroCrossings++;
-                positive = tempPositive;
-            }
-            counter++;
-        }
-        return zeroCrossings;
-    }
-
-
-    public double transformRadix2(double[] real, double[] imag)
-    {
-        int n = real.length;
-        if (n != imag.length)
-            throw new IllegalArgumentException("Mismatched lengths");
-        int levels = 31 - Integer.numberOfLeadingZeros(n);
-        if (1 << levels != n)
-            throw new IllegalArgumentException("Length is not a power of 2");
-
-        double[] cosTable = new double[n / 2];
-        double[] sinTable = new double[n / 2];
-        for (int i = 0; i < n / 2; i++) {
-            cosTable[i] = Math.cos(2 * Math.PI * i / n);
-            sinTable[i] = Math.sin(2 * Math.PI * i / n);
-        }
-
-        for (int i = 0; i < n; i++)
-        {
-            int j = Integer.reverse(i) >>> (32 - levels);
-            if (j > i) {
-                double temp = real[i];
-                real[i] = real[j];
-                real[j] = temp;
-                temp = imag[i];
-                imag[i] = imag[j];
-                imag[j] = temp;
-            }
-        }
-
-        for (int size = 2; size <= n; size *= 2)
-        {
-            int halfsize = size / 2;
-            int tablestep = n / size;
-            for (int i = 0; i < n; i += size)
-            {
-                for (int j = i, k = 0; j < i + halfsize; j++, k += tablestep)
-                {
-                    int l = j + halfsize;
-                    double tpre =  real[l] * cosTable[k] + imag[l] * sinTable[k];
-                    double tpim = -real[l] * sinTable[k] + imag[l] * cosTable[k];
-                    real[l] = real[j] - tpre;
-                    imag[l] = imag[j] - tpim;
-                    real[j] += tpre;
-                    imag[j] += tpim;
-                }
-            }
-            if (size == n)
-                break;
-        }
-
-        double energy = 0;
-
-        try
-        {
-            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
-            File csvFile = new File(baseDir, "/Alarms/OutputFFT.csv");
-            FileWriter fileWriter = new FileWriter(csvFile,true);
-            CSVWriter writer = new CSVWriter(fileWriter);
-
-            String[] header = {"Real", "Imaginary", "Magnitude", "Laplacian"};
-            writer.writeNext(header);
-
-            magList.clear();
-            ArrayList<Double> psdList = new ArrayList<>();
-            double psdSum = 0;
-
-            for(int i=0;i<real.length;i++)
-            {
-                double realSqTemp = real[i]*real[i];
-                double imagSqTemp = imag[i]*imag[i];
-                double tempSum = Math.round((realSqTemp + imagSqTemp)*1000d)/1000d;
-                double magnitude = Math.round((Math.sqrt(tempSum))*1000d)/1000d;
-                magList.add(magnitude);
-                psdList.add(tempSum);
-                psdSum = psdSum + tempSum;
-                real[i] = Math.round(real[i]*1000d)/1000d;
-                imag[i] = Math.round(imag[i]*1000d)/1000d;
-            }
-
-            ArrayList<Double> laplaceList = new ArrayList<>();
-            for (int i = 0; i < real.length - 1; i++)
-            {
-                double laplacian;
-                if(i == 0 || i == real.length - 1)laplacian = Math.round(magList.get(i));
-                else laplacian = Math.round((magList.get(i-1) - 2*(magList.get(i)) + magList.get(i+1)));
-                String[] data = {""+real[i], ""+imag[i], ""+magList.get(i), ""+laplacian};
-                writer.writeNext(data);
-                laplaceList.add(laplacian);
-            }
-
-            writer.close();
-            //energy = calculateEntropy(psdList);
-            energy = getZeroCrossings(laplaceList);
-            //energy = magList.get(0);
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-        return energy;
-    }
-
-    public double calculateEntropy(ArrayList<Double> normPSDList)
-    {
-        double entropySum = 0;
-
-        for(double temp:normPSDList)
-        {
-            double entropyTemp = temp*(Math.log(temp)/Math.log(2));
-            entropySum = entropySum + entropyTemp;
-        }
-        return 0 - entropySum;
-    }
-
-    public double calculateEnergy(ArrayList<Double> psdList)
-    {
-        double energy = 0;
-        for(double temp:psdList)
-        {
-            energy = energy + temp;
-        }
-        return energy/psdList.size();
-    }
-
 }

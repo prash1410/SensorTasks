@@ -56,6 +56,8 @@ import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
+    static String kernel = "Ham Polynomial Kernel Exponent 3 C 100.0 94.0.model";
+
     String lastLocation;
     FusedLocationProviderClient fusedLocationProviderClient;
     LocationCallback locationCallback;
@@ -127,6 +129,7 @@ public class AccelerometerBackgroundService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
+        kernel = intent.getStringExtra("Kernel");
         createNotification(intent);
         if (!accelerometerActive && checkPermissions()) activateAccelerometer();
 
@@ -377,7 +380,7 @@ public class AccelerometerBackgroundService extends Service
             AssetManager assetManager = getAssets();
             try
             {
-                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open("Ham Polynomial Kernel Exponent 3 C 100.0 94.0.model"));
+                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open(kernel));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -893,7 +896,6 @@ public class AccelerometerBackgroundService extends Service
         return laplaceList;
     }
 
-    @SuppressLint("NewApi")
     public void createNotification(Intent intent)
     {
         if (Objects.requireNonNull(intent.getAction()).equals("Start"))
@@ -902,28 +904,64 @@ public class AccelerometerBackgroundService extends Service
             notificationIntent.setAction("Main");
             notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
             Intent stopIntent = new Intent(this, AccelerometerBackgroundService.class);
             stopIntent.setAction("Stop");
             PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
-
             Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
-            Notification notification =  new Notification.Builder(this)
-                    .setContentTitle("Activity recognition service")
-                    .setTicker("Activity recognition service")
-                    .setContentText("Service running")
-                    .setOnlyAlertOnce(true)
-                    .setStyle(new Notification.BigTextStyle().bigText("Service running"))
-                    .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
-                    .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
-                    .setContentIntent(pendingIntent)
-                    .setOngoing(true)
-                    .setWhen(System.currentTimeMillis())
-                    .setShowWhen(true)
-                    .setPriority(Notification.PRIORITY_HIGH)
-                    .setColor(Color.CYAN)
-                    .setChannelId("SensorTasks1410")
-                    .addAction(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent).build();
+            Notification.Action action = new Notification.Action(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent);
+            Notification notification = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            {
+                notification = new Notification.Builder(this,"SensorTasks1410")
+                        .setContentTitle("Activity recognition service")
+                        .setTicker("Activity recognition service")
+                        .setContentText("Service running")
+                        .setOnlyAlertOnce(true)
+                        .setStyle(new Notification.BigTextStyle().bigText("Service running"))
+                        .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                        .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                        .setContentIntent(pendingIntent)
+                        .setOngoing(true)
+                        .setWhen(System.currentTimeMillis())
+                        .setShowWhen(true)
+                        .setColor(Color.CYAN)
+                        .addAction(action).build();
+            }
+            if(Build.VERSION.SDK_INT <= Build.VERSION_CODES.N)
+            {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                {
+                    notification = new Notification.Builder(this)
+                            .setContentTitle("Activity recognition service")
+                            .setTicker("Activity recognition service")
+                            .setContentText("Service running")
+                            .setOnlyAlertOnce(true)
+                            .setStyle(new Notification.BigTextStyle().bigText("Service running"))
+                            .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                            .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                            .setContentIntent(pendingIntent)
+                            .setOngoing(true)
+                            .setWhen(System.currentTimeMillis())
+                            .setShowWhen(true)
+                            .setColor(Color.CYAN)
+                            .addAction(action).build();
+                }
+                else
+                {
+                    notification = new Notification.Builder(this)
+                            .setContentTitle("Activity recognition service")
+                            .setTicker("Activity recognition service")
+                            .setContentText("Service running")
+                            .setOnlyAlertOnce(true)
+                            .setStyle(new Notification.BigTextStyle().bigText("Service running"))
+                            .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                            .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                            .setContentIntent(pendingIntent)
+                            .setOngoing(true)
+                            .setWhen(System.currentTimeMillis())
+                            .setShowWhen(true).build();
+                }
+            }
             startForeground(101, notification);
         }
         else if (intent.getAction().equals("Stop"))
@@ -942,6 +980,7 @@ public class AccelerometerBackgroundService extends Service
             CharSequence channelName = "SensorTasks notification channel";
             int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel notificationChannel = new NotificationChannel(channelID, channelName, importance);
+            notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             assert notificationManager != null;
             notificationManager.createNotificationChannel(notificationChannel);
         }
@@ -957,25 +996,61 @@ public class AccelerometerBackgroundService extends Service
         Intent stopIntent = new Intent(this, AccelerometerBackgroundService.class);
         stopIntent.setAction("Stop");
         PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
-
         Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
-        @SuppressLint({"NewApi", "LocalSuppress"})
-        Notification notification =  new Notification.Builder(this)
-                .setContentTitle("Activity recognition service")
-                .setTicker("Activity recognition service")
-                .setContentText(status)
-                .setOnlyAlertOnce(true)
-                .setStyle(new Notification.BigTextStyle().bigText(status))
-                .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
-                .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
-                .setContentIntent(pendingIntent)
-                .setOngoing(true)
-                .setWhen(System.currentTimeMillis())
-                .setShowWhen(true)
-                .setPriority(Notification.PRIORITY_HIGH)
-                .setColor(Color.CYAN)
-                .setChannelId("SensorTasks1410")
-                .addAction(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent).build();
+        Notification.Action action = new Notification.Action(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent);
+        Notification notification = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            notification = new Notification.Builder(this,"SensorTasks1410")
+                    .setContentTitle("Activity recognition service")
+                    .setTicker("Activity recognition service")
+                    .setContentText(status)
+                    .setOnlyAlertOnce(true)
+                    .setStyle(new Notification.BigTextStyle().bigText(status))
+                    .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                    .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                    .setContentIntent(pendingIntent)
+                    .setOngoing(true)
+                    .setWhen(System.currentTimeMillis())
+                    .setShowWhen(true)
+                    .setColor(Color.CYAN)
+                    .addAction(action).build();
+        }
+        if(Build.VERSION.SDK_INT <= Build.VERSION_CODES.N)
+        {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            {
+                notification = new Notification.Builder(this)
+                        .setContentTitle("Activity recognition service")
+                        .setTicker("Activity recognition service")
+                        .setContentText(status)
+                        .setOnlyAlertOnce(true)
+                        .setStyle(new Notification.BigTextStyle().bigText(status))
+                        .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                        .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                        .setContentIntent(pendingIntent)
+                        .setOngoing(true)
+                        .setWhen(System.currentTimeMillis())
+                        .setShowWhen(true)
+                        .setColor(Color.CYAN)
+                        .addAction(action).build();
+            }
+            else
+            {
+                notification = new Notification.Builder(this)
+                        .setContentTitle("Activity recognition service")
+                        .setTicker("Activity recognition service")
+                        .setContentText(status)
+                        .setOnlyAlertOnce(true)
+                        .setStyle(new Notification.BigTextStyle().bigText(status))
+                        .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                        .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                        .setContentIntent(pendingIntent)
+                        .setOngoing(true)
+                        .setWhen(System.currentTimeMillis())
+                        .setShowWhen(true).build();
+            }
+        }
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         assert notificationManager != null;
