@@ -157,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 int radioButtonID = radioGroup.getCheckedRadioButtonId();
                 RadioButton radioButton = radioGroup.findViewById(radioButtonID);
                 kernel = radioButton.getText().toString();
-                Toast.makeText(getApplicationContext(),kernel,Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(),kernel.split(".model")[0] + " selected",Toast.LENGTH_SHORT).show();
             }
         });
         AlertDialog alertDialog = dialogBuilder.create();

@@ -132,9 +132,9 @@ public class AccelerometerBackgroundService extends Service
         kernel = intent.getStringExtra("Kernel");
         createNotification(intent);
         if (!accelerometerActive && checkPermissions()) activateAccelerometer();
+        handler = new Handler();
 
         /*
-        handler = new Handler();
         serverTaskHandler = new Handler();
         serverTaskRunnable = new Runnable()
         {
@@ -269,15 +269,13 @@ public class AccelerometerBackgroundService extends Service
     public void produceFinalResults()
     {
         String result;
-        if(variance == 0 || varianceFiltered == 0)
-        {
-            result = "Still";
-            //drivingCounter = 0;
-        }
+        if(variance == 0 || varianceFiltered == 0) result = "Still";
         else result = wekaPredict();
         updateNotification(result);
-        //if (result.equals("Driving")) drivingCounter++;
-        //else drivingCounter = 0;
+
+        if (result.equals("Driving")) drivingCounter++;
+        else if(drivingCounter>0)drivingCounter--;
+
         SimpleDateFormat simpleDateFormat;
         Calendar calender = Calendar.getInstance();
         simpleDateFormat = new SimpleDateFormat("hh:mm:s a");
@@ -296,7 +294,7 @@ public class AccelerometerBackgroundService extends Service
 
             File logsFile = new File(rootDirectory + "/CSVData/Activity Log.txt");
             FileWriter fileWriter1 = new FileWriter(logsFile, true);
-            fileWriter1.write(result + " " + time + "\n");
+            fileWriter1.write(result + ", " + time + ", " + lastLocation + "\n");
             fileWriter1.flush();
             fileWriter1.close();
 
@@ -304,13 +302,12 @@ public class AccelerometerBackgroundService extends Service
             e.printStackTrace();
         }
 
-        /*
-        if (drivingCounter >= 7 && !recording)
+        if (drivingCounter >= 3 && !recording)
         {
             getSoundSample();
             getLocation();
         }
-        */
+
     }
 
     public void trimArrayLists()
@@ -494,7 +491,6 @@ public class AccelerometerBackgroundService extends Service
                 };
                 newInstance.setDataset(dataUnpredicted);
                 double predictedResult = classifier.classifyInstance(newInstance);
-                //result = "" + predictedResult;
                 if (predictedResult == 0.0) result = "Driving";
                 if (predictedResult == 1.0) result = "Neither";
                 if (predictedResult == 2.0) result = "Walking";
