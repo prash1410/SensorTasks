@@ -174,7 +174,6 @@ public class Accelerometer extends AppCompatActivity
             }
         });
     }
-    
 
     @SuppressLint("SetTextI18n")
     @Override
