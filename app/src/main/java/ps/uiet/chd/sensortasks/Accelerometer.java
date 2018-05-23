@@ -8,6 +8,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -29,10 +30,6 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 public class Accelerometer extends AppCompatActivity
 {
-    double[] xMag = new double[64];
-    double[] yMag = new double[64];
-    double[] zMag = new double[64];
-
     long tStart, tstop;
     int xZeroCrossings,yZeroCrossings,zZeroCrossings;
     RelativeLayout AccelerometerLayout;
@@ -46,7 +43,7 @@ public class Accelerometer extends AppCompatActivity
     static String xLinearAcceleration = "";
     static String zLinearAcceleration = "";
     static int count = 0;
-    static int samplingTime = 64;
+    //static int samplingTime = 64;
     Boolean Activate = true;
     String output = "",xMeasure = "",yMeasure = "",zMeasure = "";
     Button AccelerometerToggleButton;
@@ -113,10 +110,6 @@ public class Accelerometer extends AppCompatActivity
                 yMagList.add(y);
                 zMagList.add(z);
 
-                xMag[count] = x;
-                yMag[count] = y;
-                zMag[count] = z;
-
                 yLinearAcceleration += ""+y+",";
                 xLinearAcceleration += ""+x+",";
                 zLinearAcceleration += ""+z+",";
@@ -127,10 +120,7 @@ public class Accelerometer extends AppCompatActivity
                 yMeasure += ""+y+"\n";
                 zMeasure += ""+z+"\n";
                 count++;
-                if(count==samplingTime)
-                {
-                    AccelerometerToggleButton.callOnClick();
-                }
+                //if(count==samplingTime) AccelerometerToggleButton.callOnClick();
             }
 
             @Override
@@ -162,6 +152,16 @@ public class Accelerometer extends AppCompatActivity
                     AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
                     AccelerometerToggleButton.setText("Deactivate Accelerometer");
                     Activate = false;
+
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            AccelerometerToggleButton.callOnClick();
+                        }
+                    }, 15000);
                 }
                 else
                 {
@@ -247,7 +247,7 @@ public class Accelerometer extends AppCompatActivity
             writer.flush();
             writer.close();
             writeToCSV();
-            AccelerometerValue.setText(""+elapsedTime);
+            AccelerometerValue.setText(""+elapsedTime+"\n"+count);
 
         } catch (IOException e)
         {
