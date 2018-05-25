@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import au.com.bytecode.opencsv.CSVWriter;
-
 public class Accelerometer extends AppCompatActivity
 {
     long tStart, tstop;
@@ -43,7 +41,6 @@ public class Accelerometer extends AppCompatActivity
     static String xLinearAcceleration = "";
     static String zLinearAcceleration = "";
     static int count = 0;
-    //static int samplingTime = 64;
     Boolean Activate = true;
     String output = "",xMeasure = "",yMeasure = "",zMeasure = "";
     Button AccelerometerToggleButton;
@@ -120,7 +117,6 @@ public class Accelerometer extends AppCompatActivity
                 yMeasure += ""+y+"\n";
                 zMeasure += ""+z+"\n";
                 count++;
-                //if(count==samplingTime) AccelerometerToggleButton.callOnClick();
             }
 
             @Override
@@ -216,6 +212,7 @@ public class Accelerometer extends AppCompatActivity
     {
         try
         {
+            createDirectoryIfNotExists();
             File root = new File(String.valueOf(Environment.getExternalStorageDirectory()));
             File gpxfile = new File(root, "/Alarms/output"+System.currentTimeMillis()+".txt");
             FileWriter writer = new FileWriter(gpxfile,false);
@@ -230,6 +227,7 @@ public class Accelerometer extends AppCompatActivity
                     sum = sum + Double.valueOf(temp);
                 }
             }
+            int mod = count/64;
             double mean = sum/observations.size();
             double varianceSum = 0.0;
             for(double temp:observations)
@@ -246,9 +244,7 @@ public class Accelerometer extends AppCompatActivity
             writer.append("xAcc: ").append(xLinearAcceleration).append("\n\nyAcc: ").append(yLinearAcceleration).append("\n\nzAcc: ").append(zLinearAcceleration).append("\n\nxGravityAngle: ").append(String.valueOf(xAngleGravity)).append("\nyGravityAngle: ").append(String.valueOf(yAngleGravity)).append("\nzGravityAngle: ").append(String.valueOf(zAngleGravity)).append("\n\n\nX Zero Crossings: ").append(String.valueOf(xZeroCrossings)).append("\nY Zero Crossings: ").append(String.valueOf(yZeroCrossings)).append("\nZ Zero Crossings: ").append(String.valueOf(zZeroCrossings));
             writer.flush();
             writer.close();
-            writeToCSV();
-            AccelerometerValue.setText(""+elapsedTime+"\n"+count);
-
+            AccelerometerValue.setText(""+elapsedTime+"\n"+count+"\n"+mod);
         } catch (IOException e)
         {
             e.printStackTrace();
@@ -295,24 +291,9 @@ public class Accelerometer extends AppCompatActivity
         return choice;
     }
 
-    public void writeToCSV()
+    public void createDirectoryIfNotExists()
     {
-        try
-        {
-            File baseDir = new File(String.valueOf(Environment.getExternalStorageDirectory()));
-            File csvFile = new File(baseDir, "/Alarms/Output.csv");
-            FileWriter fileWriter = new FileWriter(csvFile,true);
-            CSVWriter writer = new CSVWriter(fileWriter);
-
-            for(int i=0;i<xMagList.size();i++)
-            {
-                String[] data = {""+xMagList.get(i), ""+yMagList.get(i),""+zMagList.get(i)};
-                writer.writeNext(data);
-            }
-
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        File outputFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Alarms");
+        if (!outputFolder.exists()) outputFolder.mkdirs();
     }
 }

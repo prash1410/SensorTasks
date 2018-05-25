@@ -26,6 +26,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -63,6 +64,8 @@ public class AccelerometerBackgroundService extends Service
     LocationCallback locationCallback;
 
     Handler handler = null;
+    Handler subsequentSamplesHandler = null;
+    Runnable subsequentSamplesRunnable = null;
     //Handler serverTaskHandler = null;
     //Runnable serverTaskRunnable = null;
     static int deviceID;
@@ -77,6 +80,14 @@ public class AccelerometerBackgroundService extends Service
     ArrayList<Double> xMagList = new ArrayList<>();
     ArrayList<Double> yMagList = new ArrayList<>();
     ArrayList<Double> zMagList = new ArrayList<>();
+
+    ArrayList<Double> xDummyRawMagList = new ArrayList<>();
+    ArrayList<Double> yDummyRawMagList = new ArrayList<>();
+    ArrayList<Double> zDummyRawMagList = new ArrayList<>();
+
+    ArrayList<Double> xDummyMagList = new ArrayList<>();
+    ArrayList<Double> yDummyMagList = new ArrayList<>();
+    ArrayList<Double> zDummyMagList = new ArrayList<>();
 
     ArrayList<Double> xRawMagListFiltered = new ArrayList<>();
     ArrayList<Double> yRawMagListFiltered = new ArrayList<>();
@@ -131,7 +142,7 @@ public class AccelerometerBackgroundService extends Service
     {
         kernel = intent.getStringExtra("Kernel");
         createNotification(intent);
-        if (!accelerometerActive && checkPermissions()) activateAccelerometer();
+        if (!accelerometerActive && checkPermissions()) getInitialSamples(); getSubsequentSamples(); activateAccelerometer();
         handler = new Handler();
 
         /*
@@ -158,6 +169,7 @@ public class AccelerometerBackgroundService extends Service
             stopRecording();
             handler.removeCallbacksAndMessages(null);
         }
+        subsequentSamplesHandler.removeCallbacksAndMessages(null);
         //serverTaskHandler.removeCallbacksAndMessages(null);
     }
 
@@ -207,26 +219,25 @@ public class AccelerometerBackgroundService extends Service
                 y = y * Math.sin(Math.toRadians(yAngleGravity));
                 z = z * Math.sin(Math.toRadians(zAngleGravity));
 
-                if (sampleCount >= 5)
-                {
-                    xMagList.add(Math.round(x * 100d) / 100d);
-                    yMagList.add(Math.round(y * 100d) / 100d);
-                    zMagList.add(Math.round(z * 100d) / 100d);
+                xDummyMagList.add(Math.round(x * 100d) / 100d);
+                yDummyMagList.add(Math.round(y * 100d) / 100d);
+                zDummyMagList.add(Math.round(z * 100d) / 100d);
 
-                    xRawMagList.add(Math.round(rawX * 100d) / 100d);
-                    yRawMagList.add(Math.round(rawY * 100d) / 100d);
-                    zRawMagList.add(Math.round(rawZ * 100d) / 100d);
-                }
+                xDummyRawMagList.add(Math.round(rawX * 100d) / 100d);
+                yDummyRawMagList.add(Math.round(rawY * 100d) / 100d);
+                zDummyRawMagList.add(Math.round(rawZ * 100d) / 100d);
+
+                /*
                 if (sampleCount == 68) filterData();
                 if (sampleCount > 69 && (sampleCount - 4) % 32 == 0) trimArrayLists();
-                /*
+
                 if (sampleCount == 10000)
                 {
                     stopService(new Intent(getApplicationContext(), AccelerometerBackgroundService.class));
                     startService(new Intent(getApplicationContext(), AccelerometerBackgroundService.class));
                 }
                 */
-                sampleCount++;
+                sampleCount = 1;
             }
 
             @Override
@@ -1051,5 +1062,173 @@ public class AccelerometerBackgroundService extends Service
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         assert notificationManager != null;
         notificationManager.notify(101, notification);
+    }
+
+    public void getInitialSamples()
+    {
+        Handler initialSampleCollector = new Handler();
+        initialSampleCollector.postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                ArrayList<Double> x = xDummyMagList;
+                ArrayList<Double> y = yDummyMagList;
+                ArrayList<Double> z = zDummyMagList;
+
+                ArrayList<Double> xRaw = xDummyRawMagList;
+                ArrayList<Double> yRaw = yDummyRawMagList;
+                ArrayList<Double> zRaw = zDummyRawMagList;
+                int mod = x.size()/64;
+                Log.e("SensorTasks ",""+x.size());
+                if(mod==1)
+                {
+                    Log.e("SensorTasks ","1st condition");
+                    int skipIndex = x.size()%64 - 1;
+                    for(;skipIndex<x.size()-1;skipIndex++)
+                    {
+                        xMagList.add(x.get(skipIndex));
+                        yMagList.add(y.get(skipIndex));
+                        zMagList.add(z.get(skipIndex));
+
+                        xRawMagList.add(xRaw.get(skipIndex));
+                        yRawMagList.add(yRaw.get(skipIndex));
+                        zRawMagList.add(zRaw.get(skipIndex));
+                    }
+                }
+                else if(mod > 1)
+                {
+                    Log.e("SensorTasks ","2nd condition");
+                    int skipIndex = x.size()%64 - 1;
+                    for(; skipIndex < x.size()-1; skipIndex = skipIndex + mod)
+                    {
+                        xMagList.add(x.get(skipIndex));
+                        yMagList.add(y.get(skipIndex));
+                        zMagList.add(z.get(skipIndex));
+
+                        xRawMagList.add(xRaw.get(skipIndex));
+                        yRawMagList.add(yRaw.get(skipIndex));
+                        zRawMagList.add(zRaw.get(skipIndex));
+                    }
+                }
+                else if(mod == 0)
+                {
+                    Log.e("SensorTasks ","3rd condition");
+                    xMagList = x;
+                    yMagList = y;
+                    zMagList = z;
+
+                    xRawMagList = xRaw;
+                    yRawMagList = yRaw;
+                    zRawMagList = zRaw;
+
+                    for(int i=0; i<64-x.size();i++)
+                    {
+                        xMagList.add(0.0);
+                        yMagList.add(0.0);
+                        zMagList.add(0.0);
+
+                        xRawMagList.add(0.0);
+                        yRawMagList.add(0.0);
+                        zRawMagList.add(0.0);
+                    }
+                }
+                Log.e("SensorTasks ",""+xMagList.size());
+                xDummyMagList.clear();
+                yDummyMagList.clear();
+                zDummyMagList.clear();
+                xDummyRawMagList.clear();
+                yDummyRawMagList.clear();
+                zDummyRawMagList.clear();
+                filterData();
+            }
+        }, 15000);
+    }
+
+    public void getSubsequentSamples()
+    {
+
+        subsequentSamplesHandler = new Handler();
+        subsequentSamplesRunnable = new Runnable()
+        {
+            public void run()
+            {
+                ArrayList<Double> x = xDummyMagList;
+                ArrayList<Double> y = yDummyMagList;
+                ArrayList<Double> z = zDummyMagList;
+
+                ArrayList<Double> xRaw = xDummyRawMagList;
+                ArrayList<Double> yRaw = yDummyRawMagList;
+                ArrayList<Double> zRaw = zDummyRawMagList;
+                int mod = x.size()/32;
+                Log.e("SensorTasks ",""+x.size());
+                if(mod==1)
+                {
+                    Log.e("SensorTasks ","1st condition");
+                    int skipIndex = x.size()%32 - 1;
+                    for(;skipIndex<x.size()-1;skipIndex++)
+                    {
+                        xMagList.add(x.get(skipIndex));
+                        yMagList.add(y.get(skipIndex));
+                        zMagList.add(z.get(skipIndex));
+
+                        xRawMagList.add(xRaw.get(skipIndex));
+                        yRawMagList.add(yRaw.get(skipIndex));
+                        zRawMagList.add(zRaw.get(skipIndex));
+                    }
+                }
+                else if(mod > 1)
+                {
+                    Log.e("SensorTasks ","2nd condition");
+                    int skipIndex = x.size()%32 - 1;
+                    for(; skipIndex < x.size()-1; skipIndex = skipIndex + mod)
+                    {
+                        xMagList.add(x.get(skipIndex));
+                        yMagList.add(y.get(skipIndex));
+                        zMagList.add(z.get(skipIndex));
+
+                        xRawMagList.add(xRaw.get(skipIndex));
+                        yRawMagList.add(yRaw.get(skipIndex));
+                        zRawMagList.add(zRaw.get(skipIndex));
+                    }
+                }
+                else if(mod == 0)
+                {
+                    Log.e("SensorTasks ","3rd condition");
+
+                    for(int i=0; i<x.size();i++)
+                    {
+                        xMagList.add(x.get(i));
+                        yMagList.add(y.get(i));
+                        zMagList.add(z.get(i));
+
+                        xRawMagList.add(xRaw.get(i));
+                        yRawMagList.add(yRaw.get(i));
+                        zRawMagList.add(zRaw.get(i));
+                    }
+
+                    for(int i=0; i<32-x.size();i++)
+                    {
+                        xMagList.add(0.0);
+                        yMagList.add(0.0);
+                        zMagList.add(0.0);
+
+                        xRawMagList.add(0.0);
+                        yRawMagList.add(0.0);
+                        zRawMagList.add(0.0);
+                    }
+                }
+                Log.e("SensorTasks ",""+xMagList.size());
+                xDummyMagList.clear();
+                yDummyMagList.clear();
+                zDummyMagList.clear();
+                xDummyRawMagList.clear();
+                yDummyRawMagList.clear();
+                zDummyRawMagList.clear();
+                trimArrayLists();
+                subsequentSamplesHandler.postDelayed(subsequentSamplesRunnable, 7500);
+            }
+        };
+        subsequentSamplesHandler.postDelayed(subsequentSamplesRunnable, 22500);
     }
 }
