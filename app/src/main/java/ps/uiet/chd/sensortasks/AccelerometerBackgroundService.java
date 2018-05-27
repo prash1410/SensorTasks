@@ -128,6 +128,7 @@ public class AccelerometerBackgroundService extends Service
         createDirectoryIfNotExists();
         deviceID = createDeviceID();
         createNotificationChannel();
+        Thread.setDefaultUncaughtExceptionHandler(new CustomizedExceptionHandler(Environment.getExternalStorageDirectory().getPath()));
     }
 
     @Nullable
@@ -178,9 +179,11 @@ public class AccelerometerBackgroundService extends Service
         File csvFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/CSVData");
         File audioFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/AudioData");
         File serverDataFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/ServerData");
+        File crashLogsFolder = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData/CrashLogs");
         if (!serverDataFolder.exists()) serverDataFolder.mkdirs();
         if (!csvFolder.exists()) csvFolder.mkdirs();
         if (!audioFolder.exists()) audioFolder.mkdirs();
+        if (!crashLogsFolder.exists()) crashLogsFolder.mkdirs();
         rootDirectory = Environment.getExternalStorageDirectory().getAbsolutePath() + "/AcousticData";
     }
 
@@ -1084,22 +1087,36 @@ public class AccelerometerBackgroundService extends Service
                 if(mod==1)
                 {
                     Log.e("SensorTasks ","1st condition");
-                    int skipIndex = x.size()%64 - 1;
-                    for(;skipIndex<x.size()-1;skipIndex++)
+                    if(x.size()!=64)
                     {
-                        xMagList.add(x.get(skipIndex));
-                        yMagList.add(y.get(skipIndex));
-                        zMagList.add(z.get(skipIndex));
+                        int skipIndex = x.size()%64 - 1;
+                        for(;skipIndex<x.size()-1;skipIndex++)
+                        {
+                            xMagList.add(x.get(skipIndex));
+                            yMagList.add(y.get(skipIndex));
+                            zMagList.add(z.get(skipIndex));
 
-                        xRawMagList.add(xRaw.get(skipIndex));
-                        yRawMagList.add(yRaw.get(skipIndex));
-                        zRawMagList.add(zRaw.get(skipIndex));
+                            xRawMagList.add(xRaw.get(skipIndex));
+                            yRawMagList.add(yRaw.get(skipIndex));
+                            zRawMagList.add(zRaw.get(skipIndex));
+                        }
+                    }
+                    else
+                    {
+                        xMagList = x;
+                        yMagList = y;
+                        zMagList = z;
+
+                        xRawMagList = xRaw;
+                        yRawMagList = yRaw;
+                        zRawMagList = zRaw;
                     }
                 }
                 else if(mod > 1)
                 {
                     Log.e("SensorTasks ","2nd condition");
-                    int skipIndex = x.size()%64 - 1;
+                    int skipIndex = 0;
+                    if(x.size()%64!=0)skipIndex = x.size()%64 - 1;
                     for(; skipIndex < x.size()-1; skipIndex = skipIndex + mod)
                     {
                         xMagList.add(x.get(skipIndex));
@@ -1147,7 +1164,6 @@ public class AccelerometerBackgroundService extends Service
 
     public void getSubsequentSamples()
     {
-
         subsequentSamplesHandler = new Handler();
         subsequentSamplesRunnable = new Runnable()
         {
@@ -1165,22 +1181,40 @@ public class AccelerometerBackgroundService extends Service
                 if(mod==1)
                 {
                     Log.e("SensorTasks ","1st condition");
-                    int skipIndex = x.size()%32 - 1;
-                    for(;skipIndex<x.size()-1;skipIndex++)
+                    if(x.size()!=32)
                     {
-                        xMagList.add(x.get(skipIndex));
-                        yMagList.add(y.get(skipIndex));
-                        zMagList.add(z.get(skipIndex));
+                        int skipIndex = x.size()%32 - 1;
+                        for(;skipIndex<x.size()-1;skipIndex++)
+                        {
+                            xMagList.add(x.get(skipIndex));
+                            yMagList.add(y.get(skipIndex));
+                            zMagList.add(z.get(skipIndex));
 
-                        xRawMagList.add(xRaw.get(skipIndex));
-                        yRawMagList.add(yRaw.get(skipIndex));
-                        zRawMagList.add(zRaw.get(skipIndex));
+                            xRawMagList.add(xRaw.get(skipIndex));
+                            yRawMagList.add(yRaw.get(skipIndex));
+                            zRawMagList.add(zRaw.get(skipIndex));
+                        }
                     }
+                    else
+                    {
+                        for(int i = 0; i<x.size();i++)
+                        {
+                            xMagList.add(x.get(i));
+                            yMagList.add(y.get(i));
+                            zMagList.add(z.get(i));
+
+                            xRawMagList.add(xRaw.get(i));
+                            yRawMagList.add(yRaw.get(i));
+                            zRawMagList.add(zRaw.get(i));
+                        }
+                    }
+
                 }
                 else if(mod > 1)
                 {
                     Log.e("SensorTasks ","2nd condition");
-                    int skipIndex = x.size()%32 - 1;
+                    int skipIndex = 0;
+                    if(x.size()%32!=0)skipIndex = x.size()%32 - 1;
                     for(; skipIndex < x.size()-1; skipIndex = skipIndex + mod)
                     {
                         xMagList.add(x.get(skipIndex));
