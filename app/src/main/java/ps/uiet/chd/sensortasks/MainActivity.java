@@ -138,12 +138,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             String[] kernelNames = getAssets().list("");
             for(String kernel : kernelNames)
             {
-                RadioButton radioButton = new RadioButton(this);
-                radioButton.setText(kernel);
-                radioButton.setId(count);
-                radioGroup.addView(radioButton);
-                if(count==3)radioButton.setChecked(true);
-                count++;
+                if(count<13)
+                {
+                    RadioButton radioButton = new RadioButton(this);
+                    radioButton.setText(kernel);
+                    radioButton.setId(count);
+                    radioGroup.addView(radioButton);
+                    if(count==2)radioButton.setChecked(true);
+                    count++;
+                }
             }
         } catch (IOException e)
         {
