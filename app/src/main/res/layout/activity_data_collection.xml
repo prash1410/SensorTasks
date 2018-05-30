@@ -48,7 +48,7 @@
         android:textColor="#000"
         android:id="@+id/toggleAccelerometer"
         android:padding="10dp"
-        android:text="Start Accelerometer"/>
+        android:text="Start Data Collection Service"/>
 
     <ImageView
         android:layout_marginTop="30dp"

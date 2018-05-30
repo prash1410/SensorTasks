@@ -71,6 +71,10 @@ public class Accelerometer extends AppCompatActivity
             @Override
             public void onSensorChanged(SensorEvent event)
             {
+                // alpha is calculated as t / (t + dT)
+                // with t, the low-pass filter's time-constant
+                // and dT, the event delivery rate
+
                 final float alpha = 0.8f;
                 double x = event.values[0];
                 double y = event.values[1];

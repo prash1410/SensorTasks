@@ -57,7 +57,7 @@ import weka.core.Instances;
 
 public class AccelerometerBackgroundService extends Service
 {
-    static String kernel = "Ham Polynomial Kernel Exponent 3 C 100.0 94.0.model";
+    static String model = "Ham Polynomial Kernel Exponent 3 C 100.0 94.0.model";
 
     String lastLocation;
     FusedLocationProviderClient fusedLocationProviderClient;
@@ -66,8 +66,8 @@ public class AccelerometerBackgroundService extends Service
     Handler handler = null;
     Handler subsequentSamplesHandler = null;
     Runnable subsequentSamplesRunnable = null;
-    //Handler serverTaskHandler = null;
-    //Runnable serverTaskRunnable = null;
+    Handler serverTaskHandler = null;
+    Runnable serverTaskRunnable = null;
     static int deviceID;
     String lastFile;
     int drivingCounter;
@@ -122,13 +122,13 @@ public class AccelerometerBackgroundService extends Service
     SensorEventListener AccelerometerListener;
 
     @Override
-    public void onCreate()
+    public void onCreate()  // Method called when service starts
     {
         super.onCreate();
-        createDirectoryIfNotExists();
-        deviceID = createDeviceID();
-        createNotificationChannel();
-        Thread.setDefaultUncaughtExceptionHandler(new CustomizedExceptionHandler(Environment.getExternalStorageDirectory().getPath()));
+        createDirectoryIfNotExists();   // Create directories for logs, output, etc.
+        deviceID = createDeviceID();    // Create a DeviceID to be uniquely identified by the server
+        createNotificationChannel();    // Create notification channel needed for showing notification (Oreo and above)
+        Thread.setDefaultUncaughtExceptionHandler(new CustomizedExceptionHandler(Environment.getExternalStorageDirectory().getPath()));     // Output unhandled exceptions to log file
     }
 
     @Nullable
@@ -139,39 +139,37 @@ public class AccelerometerBackgroundService extends Service
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId)
+    public int onStartCommand(Intent intent, int flags, int startId)   // Method called when service starts in addition to onCreate()
     {
-        kernel = intent.getStringExtra("Kernel");
-        createNotification(intent);
-        if (!accelerometerActive && checkPermissions()) getInitialSamples(); getSubsequentSamples(); activateAccelerometer();
+        model = intent.getStringExtra("Model");   // Get model selected by user
+        createNotification(intent);  // Create persistent service running notification
+        if (!accelerometerActive && checkPermissions()) getInitialSamples(); getSubsequentSamples(); activateAccelerometer();   // Check if accelerometer is not already active and app has the needed permissions and if true, activate accelerometer
         handler = new Handler();
-
-        /*
         serverTaskHandler = new Handler();
         serverTaskRunnable = new Runnable()
         {
-            public void run() {
-                new GetServerUpdates().execute("" + deviceID);
+            public void run()
+            {
+                new GetServerUpdates().execute("" + deviceID);   // Execute getServerUpdates AsyncTask every 20 seconds to get updates from server
                 serverTaskHandler.postDelayed(serverTaskRunnable, 20000);
             }
         };
-        serverTaskHandler.postDelayed(serverTaskRunnable, 30000);
-        */
-        return Service.START_STICKY_COMPATIBILITY;
+        serverTaskHandler.postDelayed(serverTaskRunnable, 30000);   // First time delay is set to be 30 seconds
+        return Service.START_STICKY_COMPATIBILITY;   // Start sticky service
     }
 
     @Override
-    public void onDestroy()
+    public void onDestroy()  // Method called when the service is stopped normally
     {
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
-        if (accelerometerActive) deactivateAccelerometer();
+        if (accelerometerActive) deactivateAccelerometer(); // Deactivate accelerometer if accelerometer is active
         if (recording)
         {
-            stopRecording();
-            handler.removeCallbacksAndMessages(null);
+            stopRecording();  // If audio is being recorded, stop recording
+            handler.removeCallbacksAndMessages(null);   // Unregister recording handler
         }
-        subsequentSamplesHandler.removeCallbacksAndMessages(null);
-        //serverTaskHandler.removeCallbacksAndMessages(null);
+        subsequentSamplesHandler.removeCallbacksAndMessages(null);  // Stop getting subsequent samples from server
+        serverTaskHandler.removeCallbacksAndMessages(null);  // Unregister server updates handler and stop getting updates from server
     }
 
     public void createDirectoryIfNotExists()
@@ -189,7 +187,7 @@ public class AccelerometerBackgroundService extends Service
 
     public void activateAccelerometer()
     {
-        initializeVariables();
+        initializeVariables();    // Initialize (empty) the variables
         accelerometerActive = true;
         AccelerometerManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         assert AccelerometerManager != null;
@@ -199,27 +197,30 @@ public class AccelerometerBackgroundService extends Service
             @Override
             public void onSensorChanged(SensorEvent event)
             {
+                // alpha is calculated as t / (t + dT)
+                // with t, the low-pass filter's time-constant
+                // and dT, the event delivery rate
                 final float alpha = 0.8f;
 
                 double x = event.values[0];
-                double rawX = x;
+                double rawX = x;    // raw acceleration along x-axis
                 double y = event.values[1];
-                double rawY = y;
+                double rawY = y;    // along y-axis
                 double z = event.values[2];
-                double rawZ = z;
+                double rawZ = z;    // along z-axis
 
-                gravity[0] = alpha * gravity[0] + (1 - alpha) * x;
+                gravity[0] = alpha * gravity[0] + (1 - alpha) * x;      // Isolating gravity along each axis
                 gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
                 gravity[2] = alpha * gravity[2] + (1 - alpha) * z;
 
-                if (sampleCount == 0) findMotionDirection(x, y, z);
+                if (sampleCount == 0) findMotionDirection(x, y, z);    // Get orientation angles on getting the very first sample
 
-                x = rawX - gravity[0]; // acceleration along x-axis excluding gravity
-                y = rawY - gravity[1]; // along y-axis
-                z = rawZ - gravity[2]; // along z-axis
+                x = rawX - gravity[0];   // acceleration along x-axis excluding gravity
+                y = rawY - gravity[1];   // along y-axis
+                z = rawZ - gravity[2];   // along z-axis
 
-                x = x * Math.sin(Math.toRadians(xAngleGravity));
-                y = y * Math.sin(Math.toRadians(yAngleGravity));
+                x = x * Math.sin(Math.toRadians(xAngleGravity));    // Taking orientation effect into consideration along each axis
+                y = y * Math.sin(Math.toRadians(yAngleGravity));    // This is essentially just multiplying the value with the angle
                 z = z * Math.sin(Math.toRadians(zAngleGravity));
 
                 xDummyMagList.add(Math.round(x * 100d) / 100d);
@@ -230,34 +231,23 @@ public class AccelerometerBackgroundService extends Service
                 yDummyRawMagList.add(Math.round(rawY * 100d) / 100d);
                 zDummyRawMagList.add(Math.round(rawZ * 100d) / 100d);
 
-                /*
-                if (sampleCount == 68) filterData();
-                if (sampleCount > 69 && (sampleCount - 4) % 32 == 0) trimArrayLists();
-
-                if (sampleCount == 10000)
-                {
-                    stopService(new Intent(getApplicationContext(), AccelerometerBackgroundService.class));
-                    startService(new Intent(getApplicationContext(), AccelerometerBackgroundService.class));
-                }
-                */
-                sampleCount = 1;
+                sampleCount = 1;    // Setting sample count to any integer other than zero to indicate it's not the first sample
             }
 
             @Override
-            public void onAccuracyChanged(Sensor sensor, int i) {
-            }
+            public void onAccuracyChanged(Sensor sensor, int i) {}
         };
-        AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        AccelerometerManager.registerListener(AccelerometerListener, Accelerometer, SensorManager.SENSOR_DELAY_NORMAL);     // Register listener with accelerometer and start getting the values
     }
 
-    public void deactivateAccelerometer()
+    public void deactivateAccelerometer()    // Called when service is stopped and accelerometer is to be deactivated
     {
         accelerometerActive = false;
-        if (AccelerometerManager != null && AccelerometerListener != null) AccelerometerManager.unregisterListener(AccelerometerListener);
-        initializeVariables();
+        if (AccelerometerManager != null && AccelerometerListener != null) AccelerometerManager.unregisterListener(AccelerometerListener);      // Unregister accelerometer listener
+        initializeVariables();      // Empty the variables
     }
 
-    public void initializeVariables()
+    public void initializeVariables()   // Initialize (empty) the variables
     {
         sampleCount = 0;
         xMagList.clear();
@@ -271,6 +261,11 @@ public class AccelerometerBackgroundService extends Service
 
     public void findMotionDirection(double tempInitX, double tempInitY, double tempInitZ)
     {
+        // To calculate angle made with gravity vector in degrees
+        // Math.acos is Inverse Cosine function
+        // Math.PI is simply the value of π which is 3.14
+        // 9.8 m/s^2 has been taken to be the magnitude of gravity vector
+
         if (tempInitX < 0) tempInitX = 0 - tempInitX;
         if (tempInitY < 0) tempInitY = 0 - tempInitY;
         if (tempInitZ < 0) tempInitZ = 0 - tempInitZ;
@@ -283,48 +278,38 @@ public class AccelerometerBackgroundService extends Service
     public void produceFinalResults()
     {
         String result;
-        if(variance == 0 || varianceFiltered == 0) result = "Still";
-        else result = wekaPredict();
-        updateNotification(result);
+        if(variance == 0 || varianceFiltered == 0) result = "Still";    // If variance is found to be zero, the device is assumed to be at rest. Classifier won't be queried
+        else result = wekaPredict();    // Else, call the function which queries the classifier
+        updateNotification(result);     // Update the service notification to show the activity
 
-        if (result.equals("Driving")) drivingCounter++;
-        else if(drivingCounter>0)drivingCounter--;
+        if (result.equals("Driving")) drivingCounter++;    // Increment counter if found in a moving vehicle
+        else if(drivingCounter>0)drivingCounter = 0;       // Else set the counter to zero
 
-        SimpleDateFormat simpleDateFormat;
+        SimpleDateFormat simpleDateFormat;      // Get current time for timestamp
         Calendar calender = Calendar.getInstance();
         simpleDateFormat = new SimpleDateFormat("hh:mm:s a");
         String time = simpleDateFormat.format(calender.getTime());
 
         try
         {
-            /*
-            File csvFile = new File(rootDirectory + "/CSVData/Output.csv");
-            FileWriter fileWriter = new FileWriter(csvFile, true);
-            CSVWriter writer = new CSVWriter(fileWriter);
-            String[] data = {"" + variance, "" + xZeroCrossings, "" + yZeroCrossings, "" + zZeroCrossings, "" + peaks};
-            writer.writeNext(data);
-            writer.close();
-            */
-
-            File logsFile = new File(rootDirectory + "/CSVData/Activity Log.txt");
+            File logsFile = new File(rootDirectory + "/CSVData/Activity Log.txt");     // Write activity log to text file
             FileWriter fileWriter1 = new FileWriter(logsFile, true);
             fileWriter1.write(result + ", " + time + ", " + lastLocation + "\n");
             fileWriter1.flush();
             fileWriter1.close();
 
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+        catch (IOException e) { e.printStackTrace(); }
 
-        if (drivingCounter >= 3 && !recording)
+        if (drivingCounter >= 3 && !recording)      // If classifier says driving 3 consecutive times or more and sound is already not being recorded
         {
-            getSoundSample();
-            getLocation();
+            getSoundSample();      // Get acoustic (sound) sample
+            getLocation();      // Get instantaneous location
         }
 
     }
 
-    public void trimArrayLists()
+    public void trimArrayLists()     // This method performs windowing of accelerometer data with 50% overlap
     {
         for (int i = 32; i < xMagList.size(); i++)
         {
@@ -350,7 +335,7 @@ public class AccelerometerBackgroundService extends Service
         filterData();
     }
 
-    public double calculateVariance(ArrayList<Double> dataList)
+    public double calculateVariance(ArrayList<Double> dataList)     // Calculates variance of the passed ArrayList
     {
         int count = dataList.size();
         double sum = 0;
@@ -366,7 +351,7 @@ public class AccelerometerBackgroundService extends Service
         return Math.round((squareSum / count) * 1000d) / 1000d;
     }
 
-    public int getZeroCrossings(ArrayList<Double> magList)
+    public int getZeroCrossings(ArrayList<Double> magList)      // Gets number of zero crossings of the passed ArrayList
     {
         boolean positive;
         int counter = 5, zeroCrossings = 0;
@@ -383,21 +368,24 @@ public class AccelerometerBackgroundService extends Service
         return zeroCrossings;
     }
 
-    public String wekaPredict()
+    public String wekaPredict()     // Method which queries classifier for classification
     {
         String result = "Inconclusive";
-        if (classifier == null)
+        if (classifier == null)     // If classifier object is empty
         {
             AssetManager assetManager = getAssets();
             try
             {
-                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open(kernel));
+                classifier = (Classifier) weka.core.SerializationHelper.read(assetManager.open(model));    // Load user specified model from assets folder
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        if (classifier != null)
+        if (classifier != null)     // If classifier object is NOT empty
         {
+            // Create attributes
+            // The names and order of these attributes should be identical to that of dataset used to train model
+            // If you change attributes in dataset, make sure you make changes here too
             try {
                 final Attribute attributeMean = new Attribute("Mean");
                 final Attribute attributeMeanFiltered = new Attribute("MeanFiltered");
@@ -434,6 +422,7 @@ public class AccelerometerBackgroundService extends Service
                     }
                 };
 
+                // Create an ArrayList of the above attributes
                 ArrayList<Attribute> attributeList = new ArrayList<Attribute>() {
                     {
                         add(attributeMean);
@@ -471,6 +460,8 @@ public class AccelerometerBackgroundService extends Service
 
                 Instances dataUnpredicted = new Instances("TestInstances", attributeList, 1);
                 dataUnpredicted.setClassIndex(dataUnpredicted.numAttributes() - 1);
+                // Create a DenseInstance
+                // Pass values extracted from accelerometer data here to the variables
                 DenseInstance newInstance = new DenseInstance(dataUnpredicted.numAttributes()) {
                     {
                         setValue(attributeMean, mean);
@@ -504,7 +495,9 @@ public class AccelerometerBackgroundService extends Service
                     }
                 };
                 newInstance.setDataset(dataUnpredicted);
-                double predictedResult = classifier.classifyInstance(newInstance);
+                double predictedResult = classifier.classifyInstance(newInstance);   // This line makes the classification from classifier
+
+                // For different models this order can be different
                 if (predictedResult == 0.0) result = "Driving";
                 if (predictedResult == 1.0) result = "Neither";
                 if (predictedResult == 2.0) result = "Walking";
@@ -517,41 +510,41 @@ public class AccelerometerBackgroundService extends Service
         return result;
     }
 
-    public void getSoundSample()
+    public void getSoundSample()     // This method starts and stop recording
     {
-        startRecording();
+        startRecording();    // Start recording
         handler.postDelayed(new Runnable()
         {
             @Override
             public void run()
             {
-                stopRecording();
-                //sendSoundSample();
+                stopRecording();    // Stop recording
+                sendSoundSample();  // Send sound sample to the server
             }
-        }, 10000);
+        }, 10000);   // Stop recording after 10 seconds
     }
 
-    public void startRecording()
+    public void startRecording()    //  This method starts recording
     {
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("HH_mm_ss__dd_MM_yyyy");
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("HH_mm_ss__dd_MM_yyyy");    // Getting date and time for sound sample's filename
         String currentTimestamp = sdf.format(new Date());
 
-        lastFile = rootDirectory + "/AudioData/Sample_" + currentTimestamp + ".amr";
-        try {
-            mediaRecorder = new MediaRecorder();
-            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        lastFile = rootDirectory + "/AudioData/Sample_" + currentTimestamp + ".amr";    // Set path and filename for saving sound sample
+        try
+        {
+            mediaRecorder = new MediaRecorder();    // Get MediaRecorder
+            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);     // Set recording source and format
             mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_WB);
             mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
             mediaRecorder.setOutputFile(lastFile);
-            mediaRecorder.prepare();
+            mediaRecorder.prepare();      // Acquire lock on MediaRecorder
             mediaRecorder.start();
-        } catch (IOException | IllegalStateException e) {
-            e.printStackTrace();
         }
-        recording = true;
+        catch (IOException | IllegalStateException e) { e.printStackTrace(); }
+        recording = true;      // Set global boolean recording to true
     }
 
-    public void stopRecording()
+    public void stopRecording()     // This method stops recording
     {
         if (mediaRecorder != null)
         {
@@ -560,15 +553,13 @@ public class AccelerometerBackgroundService extends Service
                 mediaRecorder.stop();
                 mediaRecorder.release();
                 mediaRecorder = null;
-
-            } catch (RuntimeException e) {
-                e.printStackTrace();
             }
+            catch (RuntimeException e) { e.printStackTrace(); }
         }
-        recording = false;
+        recording = false;      // Set global boolean recording to false
     }
 
-    public int createDeviceID()
+    public int createDeviceID()     // This method creates DeviceID
     {
         Random r = new Random();
         int Low = 1000;
@@ -576,24 +567,21 @@ public class AccelerometerBackgroundService extends Service
         return r.nextInt(High - Low) + Low;
     }
 
-    public void sendSoundSample()
+    public void sendSoundSample()       // This method calls AsyncTask for sending sound sample and GPS data along with DeviceID to server
     {
-
         try
         {
-            int uploadResult = new uploadSampleTask().execute(lastFile, "" + deviceID+";"+lastLocation).get();
-            if (uploadResult == 200) (new File(lastFile)).delete();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            int uploadResult = new uploadSampleTask().execute(lastFile, "" + deviceID+";"+lastLocation).get();      // Calling AsyncTask and passing location of last sound file, deviceID and location data
+            if (uploadResult == 200) (new File(lastFile)).delete();     // If response from the server indicates success, delete the sound sample from device's storage
         }
-
-        Toast.makeText(getApplicationContext(),"Driving!!!!!!",Toast.LENGTH_SHORT).show();
+        catch (InterruptedException | ExecutionException e) { e.printStackTrace(); }
     }
 
     @SuppressLint("MissingPermission")
-    public void getLocation()
+    public void getLocation()     // This method gets instantaneous location data from GPS
     {
-        try {
+        try
+        {
             @SuppressLint("RestrictedApi") LocationRequest locationRequest = new LocationRequest();
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationRequest.setInterval(500);
@@ -627,15 +615,12 @@ public class AccelerometerBackgroundService extends Service
                 {
                     fusedLocationProviderClient.removeLocationUpdates(locationCallback);
                 }
-            }, 6000);
+            }, 6000);     // GPS update receiver will be removed after 6 seconds
         }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
+        catch (Exception e) { e.printStackTrace(); }
     }
 
-    public int getPeaks(ArrayList<Double> dataList)
+    public int getPeaks(ArrayList<Double> dataList)     // Computation of peaks attribute
     {
         int peakCounter = 0;
         double threshold = Collections.max(dataList) * 0.95;
@@ -643,7 +628,7 @@ public class AccelerometerBackgroundService extends Service
         return peakCounter;
     }
 
-    public boolean checkPermissions()
+    public boolean checkPermissions()   // Check for various permissions required by service and return a boolean
     {
         boolean proceed = true;
         if(ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)proceed=false;
@@ -654,7 +639,7 @@ public class AccelerometerBackgroundService extends Service
         return proceed;
     }
 
-    public void filterData()
+    public void filterData()    // This function applies median filtering to data acquired by accelerometer
     {
         xMagListFiltered.clear();
         yMagListFiltered.clear();
@@ -743,7 +728,7 @@ public class AccelerometerBackgroundService extends Service
         produceFinalResults();
     }
 
-    public void getTimeDomainFeatures()
+    public void getTimeDomainFeatures()     // This function gets Time Domain features
     {
         mean = calculateMean(resultant);
         meanFiltered = calculateMean(resultantFiltered);
@@ -773,11 +758,14 @@ public class AccelerometerBackgroundService extends Service
         return Math.round((sum / count) * 1000d) / 1000d;
     }
 
-    public void getFrequencyDomainFeatures()
+    public void getFrequencyDomainFeatures()      // This function gets Frequency Domain features
     {
+        // Create(Instantiate) empty double arrays of size 64 for each axis
         double[] realX = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
         double[] realY = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
         double[] realZ = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
+
+        // Since we're dealing with time domain data, imaginary input part will always be zero
         double[] imag = new double[]{0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
 
         for(int i = 0; i < xMagList.size(); i++)
@@ -811,7 +799,7 @@ public class AccelerometerBackgroundService extends Service
         totalEntropy = Math.round((xEntropy+yEntropy+zEntropy)*1000d)/1000d;
     }
 
-    public String performFFT(double[] real, double[] imag)
+    public String performFFT(double[] real, double[] imag)      // This function performs FFT
     {
         int n = real.length;
         if (n != imag.length)
@@ -861,6 +849,7 @@ public class AccelerometerBackgroundService extends Service
                 break;
         }
 
+        // Following code computes spectral energy from FFT output
         ArrayList<Double> psdList = new ArrayList<>(), fftMagList = new ArrayList<>();
         double psdSum = 0, dcComponent = 0;
         for(int i=0;i<real.length;i++)
@@ -882,7 +871,7 @@ public class AccelerometerBackgroundService extends Service
         return ""+dcComponent+";"+psd+";"+entropy+";"+fftLaplacian;
     }
 
-    public double calculateEntropy(ArrayList<Double> psdList)
+    public double calculateEntropy(ArrayList<Double> psdList)   //This function computes Entropy from FFT output
     {
         double entropySum = 0;
         for(double temp:psdList)
@@ -893,7 +882,7 @@ public class AccelerometerBackgroundService extends Service
         return entropySum/psdList.size();
     }
 
-    public ArrayList<Double> computeLaplacian(ArrayList<Double> dataList)
+    public ArrayList<Double> computeLaplacian(ArrayList<Double> dataList)   // Performs double-derivative of FFT output and then calls to find zero crossings
     {
         ArrayList<Double> laplaceList = new ArrayList<>();
         for (int i = 0; i < dataList.size(); i++)
@@ -906,10 +895,11 @@ public class AccelerometerBackgroundService extends Service
         return laplaceList;
     }
 
-    public void createNotification(Intent intent)
+    public void createNotification(Intent intent)     // Method for creating notification
     {
         if (Objects.requireNonNull(intent.getAction()).equals("Start"))
         {
+
             Intent notificationIntent = new Intent(this, MainActivity.class);
             notificationIntent.setAction("Main");
             notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -920,7 +910,7 @@ public class AccelerometerBackgroundService extends Service
             Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
             Notification.Action action = new Notification.Action(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent);
             Notification notification = null;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // To create notification on devices running Android O and above
             {
                 notification = new Notification.Builder(this,"SensorTasks1410")
                         .setContentTitle("Activity recognition service")
@@ -939,7 +929,7 @@ public class AccelerometerBackgroundService extends Service
             }
             if(Build.VERSION.SDK_INT <= Build.VERSION_CODES.N)
             {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)      // To create notification on devices running Android Kitkat to Lollipop
                 {
                     notification = new Notification.Builder(this)
                             .setContentTitle("Activity recognition service")
@@ -956,7 +946,7 @@ public class AccelerometerBackgroundService extends Service
                             .setColor(Color.CYAN)
                             .addAction(action).build();
                 }
-                else
+                else    // To create notification on devices running Android N
                 {
                     notification = new Notification.Builder(this)
                             .setContentTitle("Activity recognition service")
@@ -974,14 +964,14 @@ public class AccelerometerBackgroundService extends Service
             }
             startForeground(101, notification);
         }
-        else if (intent.getAction().equals("Stop"))
+        else if (intent.getAction().equals("Stop"))     // Handles the stop action when notification action is clicked
         {
             stopForeground(true);
             stopSelf();
         }
     }
 
-    public void createNotificationChannel()
+    public void createNotificationChannel()     // Creates notification channel on devices running Android O or above. This is essential starting with Android O
     {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
         {
@@ -996,7 +986,7 @@ public class AccelerometerBackgroundService extends Service
         }
     }
 
-    public void updateNotification(String status)
+    public void updateNotification(String status)       // Identical to createNotificationMethod() just used for updating notification text
     {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         notificationIntent.setAction("Main");
@@ -1067,7 +1057,7 @@ public class AccelerometerBackgroundService extends Service
         notificationManager.notify(101, notification);
     }
 
-    public void getInitialSamples()
+    public void getInitialSamples()     // This runnable gets the first 64 accelerometer samples after ignoring first 5 - 10 samples
     {
         Handler initialSampleCollector = new Handler();
         initialSampleCollector.postDelayed(new Runnable()
@@ -1162,7 +1152,7 @@ public class AccelerometerBackgroundService extends Service
         }, 15000);
     }
 
-    public void getSubsequentSamples()
+    public void getSubsequentSamples()      // After getting first 64 samples, get every subsequent 32 samples
     {
         subsequentSamplesHandler = new Handler();
         subsequentSamplesRunnable = new Runnable()

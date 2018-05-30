@@ -27,7 +27,7 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener
 {
-    static String kernel = "Ham Polynomial Kernel Exponent 3 C 100.0 94.0.model";
+    static String model = "Ham Polynomial Kernel Exponent 3 C 10.0 93.45.model";
     boolean permissionCheckPassed = false;
     boolean ServiceStarted = false;
     RelativeLayout MainActivityLayout;
@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 {
                     Intent intent = new Intent(this, AccelerometerBackgroundService.class);
                     intent.setAction("Start");
-                    intent.putExtra("Kernel",kernel);
+                    intent.putExtra("Model",model);
                     startService(intent);
                     AccelerometerService.setText("Stop accelerometer\nService");
                     ServiceStarted = true;
@@ -159,8 +159,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             {
                 int radioButtonID = radioGroup.getCheckedRadioButtonId();
                 RadioButton radioButton = radioGroup.findViewById(radioButtonID);
-                kernel = radioButton.getText().toString();
-                Toast.makeText(getApplicationContext(),kernel.split(".model")[0] + " selected",Toast.LENGTH_SHORT).show();
+                model = radioButton.getText().toString();
+                Toast.makeText(getApplicationContext(),model.split(".model")[0] + " selected",Toast.LENGTH_SHORT).show();
             }
         });
         AlertDialog alertDialog = dialogBuilder.create();
