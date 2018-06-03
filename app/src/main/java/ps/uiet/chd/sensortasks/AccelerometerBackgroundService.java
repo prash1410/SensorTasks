@@ -927,9 +927,9 @@ public class AccelerometerBackgroundService extends Service
                         .setColor(Color.CYAN)
                         .addAction(action).build();
             }
-            if(Build.VERSION.SDK_INT <= Build.VERSION_CODES.N)
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
             {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)      // To create notification on devices running Android Kitkat to Lollipop
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)      // To create notification on devices running Android Lollipop to Nougat
                 {
                     notification = new Notification.Builder(this)
                             .setContentTitle("Activity recognition service")
@@ -946,7 +946,7 @@ public class AccelerometerBackgroundService extends Service
                             .setColor(Color.CYAN)
                             .addAction(action).build();
                 }
-                else    // To create notification on devices running Android N
+                else    // To create notification on devices running below Android Lollipop
                 {
                     notification = new Notification.Builder(this)
                             .setContentTitle("Activity recognition service")
@@ -1016,7 +1016,7 @@ public class AccelerometerBackgroundService extends Service
                     .setColor(Color.CYAN)
                     .addAction(action).build();
         }
-        if(Build.VERSION.SDK_INT <= Build.VERSION_CODES.N)
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
         {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             {
