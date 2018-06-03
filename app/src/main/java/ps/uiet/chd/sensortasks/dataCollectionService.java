@@ -2,8 +2,11 @@ package ps.uiet.chd.sensortasks;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -12,9 +15,12 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.widget.Toast;
 
 import java.io.File;
@@ -33,9 +39,20 @@ public class dataCollectionService extends Service
     static String label;
     static String rootDirectory;
 
+    Handler subsequentSamplesHandler = null;
+    Runnable subsequentSamplesRunnable = null;
+
     File rawDataFile;
     FileWriter rawDataFileWriter;
     CSVWriter rawDataCSVWriter;
+
+    ArrayList<Double> xDummyRawMagList = new ArrayList<>();
+    ArrayList<Double> yDummyRawMagList = new ArrayList<>();
+    ArrayList<Double> zDummyRawMagList = new ArrayList<>();
+
+    ArrayList<Double> xDummyMagList = new ArrayList<>();
+    ArrayList<Double> yDummyMagList = new ArrayList<>();
+    ArrayList<Double> zDummyMagList = new ArrayList<>();
 
     ArrayList<Double> xRawMagList = new ArrayList<>();
     ArrayList<Double> yRawMagList = new ArrayList<>();
@@ -87,47 +104,14 @@ public class dataCollectionService extends Service
     {
         super.onCreate();
         createDirectoryIfNotExists();
+        createNotificationChannel();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        if (Objects.requireNonNull(intent.getAction()).equals("Start"))
-        {
-            label = intent.getStringExtra("Label");
-            Intent notificationIntent = new Intent(this, dataCollection.class);
-            notificationIntent.setAction("Main");
-            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
-            Intent stopIntent = new Intent(this, dataCollectionService.class);
-            stopIntent.setAction("Stop");
-            PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
-
-            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
-            @SuppressLint({"NewApi", "LocalSuppress"})
-            Notification notification = new Notification.Builder(this)
-                    .setContentTitle("Data collection service")
-                    .setTicker("Data collection service")
-                    .setContentText(label)
-                    .setStyle(new Notification.BigTextStyle().bigText(label))
-                    .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
-                    .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
-                    .setContentIntent(pendingIntent)
-                    .setOngoing(true)
-                    .setWhen(System.currentTimeMillis())
-                    .setShowWhen(true)
-                    .setPriority(Notification.PRIORITY_HIGH)
-                    .setColor(Color.CYAN)
-                    .addAction(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent).build();
-            startForeground(101, notification);
-            if (!accelerometerActive) activateAccelerometer();
-        }
-        else if (intent.getAction().equals("Stop"))
-        {
-            stopForeground(true);
-            stopSelf();
-        }
+        createNotification(intent);
+        if (!accelerometerActive) activateAccelerometer(); getInitialSamples(); getSubsequentSamples();
         return Service.START_STICKY_COMPATIBILITY;
     }
 
@@ -168,45 +152,41 @@ public class dataCollectionService extends Service
             @Override
             public void onSensorChanged(SensorEvent event)
             {
-                // alpha is calculated as t / (t + dt)
+                // alpha is calculated as t / (t + dT)
                 // with t, the low-pass filter's time-constant
                 // and dT, the event delivery rate
                 final float alpha = 0.8f;
 
-                double x = event.values[0]; // raw acceleration along x-axis
-                double rawX = x;
-                double y = event.values[1]; // along y-axis
-                double rawY = y;
-                double z = event.values[2]; // along z-axis
-                double rawZ = z;
+                double x = event.values[0];
+                double rawX = x;    // raw acceleration along x-axis
+                double y = event.values[1];
+                double rawY = y;    // along y-axis
+                double z = event.values[2];
+                double rawZ = z;    // along z-axis
 
-                gravity[0] = alpha * gravity[0] + (1 - alpha) * x; // isolating gravity effect along x-axis
-                gravity[1] = alpha * gravity[1] + (1 - alpha) * y; // along y-axis
-                gravity[2] = alpha * gravity[2] + (1 - alpha) * z; // along z-axis
+                gravity[0] = alpha * gravity[0] + (1 - alpha) * x;      // Isolating gravity along each axis
+                gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
+                gravity[2] = alpha * gravity[2] + (1 - alpha) * z;
 
-                if (sampleCount == 0) findMotionDirection(x, y, z);
+                if (sampleCount == 0) findMotionDirection(x, y, z);    // Get orientation angles on getting the very first sample
 
-                x = rawX - gravity[0]; // acceleration along x-axis excluding gravity
-                y = rawY - gravity[1]; // along y-axis
-                z = rawZ - gravity[2]; // along z-axis
+                x = rawX - gravity[0];   // acceleration along x-axis excluding gravity
+                y = rawY - gravity[1];   // along y-axis
+                z = rawZ - gravity[2];   // along z-axis
 
-                x = x * Math.sin(Math.toRadians(xAngleGravity));
-                y = y * Math.sin(Math.toRadians(yAngleGravity));
+                x = x * Math.sin(Math.toRadians(xAngleGravity));    // Taking orientation effect into consideration along each axis
+                y = y * Math.sin(Math.toRadians(yAngleGravity));    // This is essentially just multiplying the value with the angle
                 z = z * Math.sin(Math.toRadians(zAngleGravity));
 
-                if (sampleCount >= 5)
-                {
-                    xMagList.add(Math.round(x * 100d) / 100d);
-                    yMagList.add(Math.round(y * 100d) / 100d);
-                    zMagList.add(Math.round(z * 100d) / 100d);
+                xDummyMagList.add(Math.round(x * 100d) / 100d);
+                yDummyMagList.add(Math.round(y * 100d) / 100d);
+                zDummyMagList.add(Math.round(z * 100d) / 100d);
 
-                    xRawMagList.add(Math.round(rawX * 100d) / 100d);
-                    yRawMagList.add(Math.round(rawY * 100d) / 100d);
-                    zRawMagList.add(Math.round(rawZ * 100d) / 100d);
-                }
-                if (sampleCount == 68) filterData();
-                if (sampleCount > 69 && (sampleCount - 4) % 32 == 0) trimArrayLists();
-                sampleCount++;
+                xDummyRawMagList.add(Math.round(rawX * 100d) / 100d);
+                yDummyRawMagList.add(Math.round(rawY * 100d) / 100d);
+                zDummyRawMagList.add(Math.round(rawZ * 100d) / 100d);
+
+                sampleCount = 1;    // Setting sample count to any integer other than zero to indicate it's not the first sample
             }
 
             @Override
@@ -255,6 +235,7 @@ public class dataCollectionService extends Service
     {
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
         if (accelerometerActive) deactivateAccelerometer();
+        subsequentSamplesHandler.removeCallbacksAndMessages(null);
     }
 
     @SuppressLint("SimpleDateFormat")
@@ -604,5 +585,295 @@ public class dataCollectionService extends Service
             laplaceList.add(laplacian);
         }
         return laplaceList;
+    }
+
+    public void getInitialSamples()     // This runnable gets the first 64 accelerometer samples after ignoring first 5 - 10 samples
+    {
+        Handler initialSampleCollector = new Handler();
+        initialSampleCollector.postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                ArrayList<Double> x = xDummyMagList;
+                ArrayList<Double> y = yDummyMagList;
+                ArrayList<Double> z = zDummyMagList;
+
+                ArrayList<Double> xRaw = xDummyRawMagList;
+                ArrayList<Double> yRaw = yDummyRawMagList;
+                ArrayList<Double> zRaw = zDummyRawMagList;
+                int mod = x.size()/64;
+                Log.e("SensorTasks ",""+x.size());
+                if(mod==1)
+                {
+                    Log.e("SensorTasks ","1st condition");
+                    if(x.size()!=64)
+                    {
+                        int skipIndex = x.size()%64 - 1;
+                        for(;skipIndex<x.size()-1;skipIndex++)
+                        {
+                            xMagList.add(x.get(skipIndex));
+                            yMagList.add(y.get(skipIndex));
+                            zMagList.add(z.get(skipIndex));
+
+                            xRawMagList.add(xRaw.get(skipIndex));
+                            yRawMagList.add(yRaw.get(skipIndex));
+                            zRawMagList.add(zRaw.get(skipIndex));
+                        }
+                    }
+                    else
+                    {
+                        xMagList = x;
+                        yMagList = y;
+                        zMagList = z;
+
+                        xRawMagList = xRaw;
+                        yRawMagList = yRaw;
+                        zRawMagList = zRaw;
+                    }
+                }
+                else if(mod > 1)
+                {
+                    Log.e("SensorTasks ","2nd condition");
+                    int skipIndex = 0;
+                    if(x.size()%64!=0)skipIndex = x.size()%64 - 1;
+                    for(; skipIndex < x.size()-1; skipIndex = skipIndex + mod)
+                    {
+                        xMagList.add(x.get(skipIndex));
+                        yMagList.add(y.get(skipIndex));
+                        zMagList.add(z.get(skipIndex));
+
+                        xRawMagList.add(xRaw.get(skipIndex));
+                        yRawMagList.add(yRaw.get(skipIndex));
+                        zRawMagList.add(zRaw.get(skipIndex));
+                    }
+                }
+                else if(mod == 0)
+                {
+                    Log.e("SensorTasks ","3rd condition");
+                    xMagList = x;
+                    yMagList = y;
+                    zMagList = z;
+
+                    xRawMagList = xRaw;
+                    yRawMagList = yRaw;
+                    zRawMagList = zRaw;
+
+                    for(int i=0; i<64-x.size();i++)
+                    {
+                        xMagList.add(0.0);
+                        yMagList.add(0.0);
+                        zMagList.add(0.0);
+
+                        xRawMagList.add(0.0);
+                        yRawMagList.add(0.0);
+                        zRawMagList.add(0.0);
+                    }
+                }
+                Log.e("SensorTasks ",""+xMagList.size());
+                xDummyMagList.clear();
+                yDummyMagList.clear();
+                zDummyMagList.clear();
+                xDummyRawMagList.clear();
+                yDummyRawMagList.clear();
+                zDummyRawMagList.clear();
+                filterData();
+            }
+        }, 15000);
+    }
+
+    public void getSubsequentSamples()      // After getting first 64 samples, get every subsequent 32 samples
+    {
+        subsequentSamplesHandler = new Handler();
+        subsequentSamplesRunnable = new Runnable()
+        {
+            public void run()
+            {
+                ArrayList<Double> x = xDummyMagList;
+                ArrayList<Double> y = yDummyMagList;
+                ArrayList<Double> z = zDummyMagList;
+
+                ArrayList<Double> xRaw = xDummyRawMagList;
+                ArrayList<Double> yRaw = yDummyRawMagList;
+                ArrayList<Double> zRaw = zDummyRawMagList;
+                int mod = x.size()/32;
+                Log.e("SensorTasks ",""+x.size());
+                if(mod==1)
+                {
+                    Log.e("SensorTasks ","1st condition");
+                    if(x.size()!=32)
+                    {
+                        int skipIndex = x.size()%32 - 1;
+                        for(;skipIndex<x.size()-1;skipIndex++)
+                        {
+                            xMagList.add(x.get(skipIndex));
+                            yMagList.add(y.get(skipIndex));
+                            zMagList.add(z.get(skipIndex));
+
+                            xRawMagList.add(xRaw.get(skipIndex));
+                            yRawMagList.add(yRaw.get(skipIndex));
+                            zRawMagList.add(zRaw.get(skipIndex));
+                        }
+                    }
+                    else
+                    {
+                        for(int i = 0; i<x.size();i++)
+                        {
+                            xMagList.add(x.get(i));
+                            yMagList.add(y.get(i));
+                            zMagList.add(z.get(i));
+
+                            xRawMagList.add(xRaw.get(i));
+                            yRawMagList.add(yRaw.get(i));
+                            zRawMagList.add(zRaw.get(i));
+                        }
+                    }
+
+                }
+                else if(mod > 1)
+                {
+                    Log.e("SensorTasks ","2nd condition");
+                    int skipIndex = 0;
+                    if(x.size()%32!=0)skipIndex = x.size()%32 - 1;
+                    for(; skipIndex < x.size()-1; skipIndex = skipIndex + mod)
+                    {
+                        xMagList.add(x.get(skipIndex));
+                        yMagList.add(y.get(skipIndex));
+                        zMagList.add(z.get(skipIndex));
+
+                        xRawMagList.add(xRaw.get(skipIndex));
+                        yRawMagList.add(yRaw.get(skipIndex));
+                        zRawMagList.add(zRaw.get(skipIndex));
+                    }
+                }
+                else if(mod == 0)
+                {
+                    Log.e("SensorTasks ","3rd condition");
+
+                    for(int i=0; i<x.size();i++)
+                    {
+                        xMagList.add(x.get(i));
+                        yMagList.add(y.get(i));
+                        zMagList.add(z.get(i));
+
+                        xRawMagList.add(xRaw.get(i));
+                        yRawMagList.add(yRaw.get(i));
+                        zRawMagList.add(zRaw.get(i));
+                    }
+
+                    for(int i=0; i<32-x.size();i++)
+                    {
+                        xMagList.add(0.0);
+                        yMagList.add(0.0);
+                        zMagList.add(0.0);
+
+                        xRawMagList.add(0.0);
+                        yRawMagList.add(0.0);
+                        zRawMagList.add(0.0);
+                    }
+                }
+                Log.e("SensorTasks ",""+xMagList.size());
+                xDummyMagList.clear();
+                yDummyMagList.clear();
+                zDummyMagList.clear();
+                xDummyRawMagList.clear();
+                yDummyRawMagList.clear();
+                zDummyRawMagList.clear();
+                trimArrayLists();
+                subsequentSamplesHandler.postDelayed(subsequentSamplesRunnable, 7500);
+            }
+        };
+        subsequentSamplesHandler.postDelayed(subsequentSamplesRunnable, 22500);
+    }
+
+    public void createNotificationChannel()     // Creates notification channel on devices running Android O or above. This is essential starting with Android O
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            String channelID = "SensorTasks1410";
+            CharSequence channelName = "SensorTasks notification channel";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel notificationChannel = new NotificationChannel(channelID, channelName, importance);
+            notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            assert notificationManager != null;
+            notificationManager.createNotificationChannel(notificationChannel);
+        }
+    }
+
+    public void createNotification(Intent intent)     // Method for creating notification
+    {
+        if (Objects.requireNonNull(intent.getAction()).equals("Start"))
+        {
+            String label = intent.getStringExtra("Label");
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.setAction("Main");
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+            Intent stopIntent = new Intent(this, AccelerometerBackgroundService.class);
+            stopIntent.setAction("Stop");
+            PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
+            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
+            Notification.Action action = new Notification.Action(R.drawable.ic_stop_black_18dp, "Stop", stopPendingIntent);
+            Notification notification = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // To create notification on devices running Android O and above
+            {
+                notification = new Notification.Builder(this,"SensorTasks1410")
+                        .setContentTitle("Data collection service")
+                        .setTicker("Data collection service")
+                        .setContentText(label)
+                        .setOnlyAlertOnce(true)
+                        .setStyle(new Notification.BigTextStyle().bigText(label))
+                        .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                        .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                        .setContentIntent(pendingIntent)
+                        .setOngoing(true)
+                        .setWhen(System.currentTimeMillis())
+                        .setShowWhen(true)
+                        .setColor(Color.CYAN)
+                        .addAction(action).build();
+            }
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+            {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)      // To create notification on devices running Android Lollipop to Nougat
+                {
+                    notification = new Notification.Builder(this)
+                            .setContentTitle("Data collection service")
+                            .setTicker("Data collection service")
+                            .setContentText(label)
+                            .setOnlyAlertOnce(true)
+                            .setStyle(new Notification.BigTextStyle().bigText(label))
+                            .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                            .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                            .setContentIntent(pendingIntent)
+                            .setOngoing(true)
+                            .setWhen(System.currentTimeMillis())
+                            .setShowWhen(true)
+                            .setColor(Color.CYAN)
+                            .addAction(action).build();
+                }
+                else    // To create notification on devices running below Android Lollipop
+                {
+                    notification = new Notification.Builder(this)
+                            .setContentTitle("Data collection service")
+                            .setTicker("Data collection service")
+                            .setContentText(label)
+                            .setOnlyAlertOnce(true)
+                            .setStyle(new Notification.BigTextStyle().bigText(label))
+                            .setSmallIcon(R.drawable.ic_settings_remote_black_18dp)
+                            .setLargeIcon(Bitmap.createScaledBitmap(icon, 128, 128, false))
+                            .setContentIntent(pendingIntent)
+                            .setOngoing(true)
+                            .setWhen(System.currentTimeMillis())
+                            .setShowWhen(true).build();
+                }
+            }
+            startForeground(101, notification);
+        }
+        else if (intent.getAction().equals("Stop"))     // Handles the stop action when notification action is clicked
+        {
+            stopForeground(true);
+            stopSelf();
+        }
     }
 }
