@@ -105,11 +105,13 @@ public class dataCollectionService extends Service
         super.onCreate();
         createDirectoryIfNotExists();
         createNotificationChannel();
+        Thread.setDefaultUncaughtExceptionHandler(new CustomizedExceptionHandler(Environment.getExternalStorageDirectory().getPath()));
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
+        label = intent.getStringExtra("Label");
         createNotification(intent);
         if (!accelerometerActive) activateAccelerometer(); getInitialSamples(); getSubsequentSamples();
         return Service.START_STICKY_COMPATIBILITY;
@@ -805,12 +807,11 @@ public class dataCollectionService extends Service
     {
         if (Objects.requireNonNull(intent.getAction()).equals("Start"))
         {
-            String label = intent.getStringExtra("Label");
-            Intent notificationIntent = new Intent(this, MainActivity.class);
+            Intent notificationIntent = new Intent(this, dataCollection.class);
             notificationIntent.setAction("Main");
             notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-            Intent stopIntent = new Intent(this, AccelerometerBackgroundService.class);
+            Intent stopIntent = new Intent(this, dataCollectionService.class);
             stopIntent.setAction("Stop");
             PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
             Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_settings_remote_black_48dp);
